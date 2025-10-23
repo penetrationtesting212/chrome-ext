@@ -1,0 +1,324 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MANAGEMENT
+// ============================================
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  password      String
+  name          String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  // Relations
+  projects           Project[]
+  scripts            Script[]
+  refreshTokens      RefreshToken[]
+  testRuns           TestRun[]
+  testDataFiles      TestDataFile[]
+  extensionScripts   ExtensionScript[]
+  locatorStrategies  LocatorStrategy[]
+  
+  @@index([email])
+}
+
+model RefreshToken {
+  id         String    @id @default(cuid())
+  token      String    @unique
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  
+  @@index([userId])
+  @@index([token])
+}
+
+// ============================================
+// PROJECT & SCRIPT MANAGEMENT
+// ============================================
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  scripts     Script[]
+  
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Script {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?  @db.Text
+  language        String   @default("typescript") // 'typescript', 'javascript', 'python', 'java', 'csharp', 'robot'
+  code            String   @db.Text
+  projectId       String?
+  project         Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Playwright-specific metadata
+  browserType     String   @default("chromium") // 'chromium', 'firefox', 'webkit'
+  viewport        Json?    // { width: 1280, height: 720 }
+  testIdAttribute String   @default("data-testid")
+  
+  // Self-healing configuration
+  selfHealingEnabled Boolean @default(true)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  testRuns           TestRun[]
+  selfHealingLocators SelfHealingLocator[]
+  testDataFiles      TestDataFile[]
+  variables          Variable[]
+  breakpoints        Breakpoint[]
+  
+  @@index([userId])
+  @@index([projectId])
+  @@index([createdAt])
+}
+
+// ============================================
+// TEST EXECUTION
+// ============================================
+
+model TestRun {
+  id          String   @id @default(cuid())
+  scriptId    String
+  script      Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  status      String   // 'running', 'passed', 'failed', 'timeout', 'cancelled'
+  duration    Int?     // milliseconds
+  errorMsg    String?  @db.Text
+  
+  // Artifacts
+  traceUrl       String?
+  screenshotUrls Json?  // array of URLs
+  videoUrl       String?
+  allureReportUrl String? // Allure report URL
+  
+  // Metadata
+  environment    String?  // 'development', 'staging', 'production'
+  browser        String   @default("chromium")
+  viewport       Json?
+  
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  
+  // Relations
+  steps       TestStep[]
+  
+  @@index([scriptId])
+  @@index([userId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+model TestStep {
+  id          String   @id @default(cuid())
+  testRunId   String
+  testRun     TestRun  @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  
+  stepNumber  Int
+  action      String   // 'goto', 'click', 'fill', 'press', etc.
+  selector    String?  @db.Text
+  value       String?  @db.Text
+  status      String   // 'running', 'passed', 'failed', 'skipped'
+  duration    Int?     // milliseconds
+  errorMsg    String?  @db.Text
+  
+  // Self-healing metadata
+  originalLocator String? @db.Text
+  healedLocator   String? @db.Text
+  wasHealed       Boolean @default(false)
+  
+  timestamp   DateTime @default(now())
+  
+  @@index([testRunId])
+  @@index([stepNumber])
+}
+
+// ============================================
+// SELF-HEALING MECHANISM
+// ============================================
+
+model SelfHealingLocator {
+  id              String   @id @default(cuid())
+  scriptId        String
+  script          Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  
+  // Original locator that failed
+  brokenLocator   String   @db.Text
+  brokenType      String   // 'id', 'css', 'xpath', 'testid', 'name'
+  
+  // Working alternative locator
+  validLocator    String   @db.Text
+  validType       String   // 'id', 'css', 'xpath', 'testid', 'name'
+  
+  // Metadata
+  elementTag      String?  // 'button', 'input', etc.
+  elementText     String?  @db.Text
+  confidence      Float    @default(1.0) // 0.0 to 1.0
+  
+  // Approval workflow
+  status          String   @default("pending") // 'pending', 'approved', 'rejected'
+  approvedAt      DateTime?
+  
+  // Usage tracking
+  timesUsed       Int      @default(0)
+  lastUsedAt      DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([scriptId])
+  @@index([status])
+  @@index([brokenLocator])
+  @@unique([scriptId, brokenLocator, validLocator])
+}
+
+model LocatorStrategy {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Priority order (lower number = higher priority)
+  priority    Int
+  strategy    String   // 'id', 'css', 'xpath', 'testid', 'name'
+  enabled     Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([userId, strategy])
+  @@index([userId, priority])
+}
+
+// ============================================
+// DATA-DRIVEN TESTING (DDT)
+// ============================================
+
+model TestDataFile {
+  id          String   @id @default(cuid())
+  name        String
+  fileName    String   // Original filename
+  fileType    String   // 'csv', 'json'
+  fileSize    Int      // bytes
+  fileUrl     String?  // S3/storage URL
+  
+  scriptId    String?
+  script      Script?  @relation(fields: [scriptId], references: [id], onDelete: SetNull)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Parsed data metadata
+  rowCount    Int      @default(0)
+  columnNames Json?    // array of column names
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  rows        TestDataRow[]
+  
+  @@index([scriptId])
+  @@index([userId])
+}
+
+model TestDataRow {
+  id          String       @id @default(cuid())
+  fileId      String
+  file        TestDataFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  
+  rowNumber   Int
+  data        Json         // Key-value pairs from CSV/JSON
+  
+  createdAt   DateTime     @default(now())
+  
+  @@index([fileId])
+  @@index([rowNumber])
+  @@unique([fileId, rowNumber])
+}
+
+// ============================================
+// EXTENSION SCRIPTS (CUSTOM COMMANDS)
+// ============================================
+
+model ExtensionScript {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  code        String   @db.Text
+  scriptType  String   // 'locator', 'action', 'assertion'
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  enabled     Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([scriptType])
+}
+
+// ============================================
+// DEBUGGING FEATURES
+// ============================================
+
+model Variable {
+  id          String   @id @default(cuid())
+  scriptId    String
+  script      Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  
+  name        String
+  value       String   @db.Text
+  type        String   // 'string', 'number', 'boolean', 'object'
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([scriptId])
+  @@unique([scriptId, name])
+}
+
+model Breakpoint {
+  id          String   @id @default(cuid())
+  scriptId    String
+  script      Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  
+  lineNumber  Int
+  enabled     Boolean  @default(true)
+  condition   String?  @db.Text // Optional conditional breakpoint
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([scriptId])
+  @@unique([scriptId, lineNumber])
+}
