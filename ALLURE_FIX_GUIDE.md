@@ -90,20 +90,20 @@ sequenceDiagram
     Extension->>Backend: POST /api/test-runs/start
     Backend->>Allure: startTest(testRunId, scriptName)
     Allure-->>Backend: Test initialized
-    
+
     Backend->>Allure: recordStep() x4
     Allure-->>Backend: Steps recorded
-    
+
     Backend->>Allure: endTest(status='passed')
     Allure-->>Backend: Test completed
     Note over Allure: JSON file created in allure-results/
-    
+
     User->>Dashboard: Click "Generate Report"
     Dashboard->>Backend: POST /api/allure/generate/:testRunId
     Backend->>Allure: npx allure generate
     Allure-->>Backend: HTML report created
     Backend-->>Dashboard: Report URL
-    
+
     Dashboard->>User: Display interactive report
 ```
 
@@ -177,7 +177,7 @@ dir allure-results
 
 # Should show: {testRunId}-result.json
 
-# Check report files  
+# Check report files
 dir allure-reports/{testRunId}
 
 # Should show: index.html, data/, plugins/, styles/
@@ -248,9 +248,9 @@ ws.send(JSON.stringify({
 
 ## Summary
 
-✅ **Problem Fixed**: Allure reports now generate successfully  
-✅ **Root Cause**: Missing integration between test execution and Allure service  
-✅ **Solution**: Automatic step recording during test runs  
-✅ **Status**: Ready to test immediately  
+✅ **Problem Fixed**: Allure reports now generate successfully
+✅ **Root Cause**: Missing integration between test execution and Allure service
+✅ **Solution**: Automatic step recording during test runs
+✅ **Status**: Ready to test immediately
 
 **Test Now**: Execute any test → Wait 2 seconds → Click "Generate Report" → View interactive Allure report! 🎉

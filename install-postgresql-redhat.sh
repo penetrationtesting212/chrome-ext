@@ -91,105 +91,105 @@ check_postgresql_installed() {
 # Function to install PostgreSQL on RHEL/CentOS/Rocky/AlmaLinux
 install_postgresql_rhel() {
     print_status "Installing PostgreSQL on RHEL-based distribution..."
-    
+
     # Enable AppStream repository (for RHEL 8+)
     print_status "Enabling PostgreSQL repository..."
     sudo dnf module -y enable postgresql:13
-    
+
     # Install PostgreSQL server and contrib
     print_status "Installing PostgreSQL server and contrib..."
     sudo dnf install -y postgresql-server postgresql-contrib
-    
+
     # Initialize PostgreSQL database
     print_status "Initializing PostgreSQL database..."
     sudo postgresql-setup --initdb
-    
+
     # Start and enable PostgreSQL service
     print_status "Starting and enabling PostgreSQL service..."
     sudo systemctl start postgresql
     sudo systemctl enable postgresql
-    
+
     print_success "PostgreSQL installed successfully"
 }
 
 # Function to install PostgreSQL on Fedora
 install_postgresql_fedora() {
     print_status "Installing PostgreSQL on Fedora..."
-    
+
     # Install PostgreSQL server and contrib
     print_status "Installing PostgreSQL server and contrib..."
     sudo dnf install -y postgresql-server postgresql-contrib
-    
+
     # Initialize PostgreSQL database
     print_status "Initializing PostgreSQL database..."
     sudo postgresql-setup --initdb
-    
+
     # Start and enable PostgreSQL service
     print_status "Starting and enabling PostgreSQL service..."
     sudo systemctl start postgresql
     sudo systemctl enable postgresql
-    
+
     print_success "PostgreSQL installed successfully"
 }
 
 # Function to configure PostgreSQL
 configure_postgresql() {
     print_status "Configuring PostgreSQL..."
-    
+
     # Set password for postgres user
     print_status "Setting password for postgres user..."
     sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
-    
+
     # Configure PostgreSQL to accept connections
     PG_HBA_FILE="/var/lib/pgsql/data/pg_hba.conf"
     POSTGRESQL_CONF="/var/lib/pgsql/data/postgresql.conf"
-    
+
     # Backup original files
     sudo cp "$PG_HBA_FILE" "$PG_HBA_FILE.backup"
     sudo cp "$POSTGRESQL_CONF" "$POSTGRESQL_CONF.backup"
-    
+
     # Update pg_hba.conf to use md5 authentication
     print_status "Updating authentication method in pg_hba.conf..."
     sudo sed -i 's/scram-sha-256/md5/g' "$PG_HBA_FILE"
-    
+
     # Listen on all interfaces
     print_status "Configuring PostgreSQL to listen on all interfaces..."
     sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" "$POSTGRESQL_CONF"
-    
+
     # Restart PostgreSQL to apply changes
     print_status "Restarting PostgreSQL to apply configuration changes..."
     sudo systemctl restart postgresql
-    
+
     print_success "PostgreSQL configured successfully"
 }
 
 # Function to create database and user
 create_database_and_user() {
     print_status "Creating database and user for Playwright-CRX..."
-    
+
     # Create database
     print_status "Creating database: $DB_NAME"
     sudo -u postgres psql -c "CREATE DATABASE $DB_NAME;" || {
         print_warning "Database $DB_NAME already exists"
     }
-    
+
     # Create user
     print_status "Creating user: $DB_USER"
     sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';" || {
         print_warning "User $DB_USER already exists"
     }
-    
+
     # Grant privileges to user
     print_status "Granting privileges to user: $DB_USER"
     sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
-    
+
     print_success "Database and user created successfully"
 }
 
 # Function to test PostgreSQL connection
 test_postgresql_connection() {
     print_status "Testing PostgreSQL connection..."
-    
+
     # Test connection to database
     if PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT version();" &> /dev/null; then
         print_success "PostgreSQL connection test successful"
@@ -220,9 +220,9 @@ display_connection_info() {
 # Function to create a sample .env file
 create_env_file() {
     ENV_FILE=".env"
-    
+
     print_status "Creating sample .env file..."
-    
+
     cat > "$ENV_FILE" << EOF
 # Database Configuration
 DB_HOST=$DB_HOST
@@ -240,7 +240,7 @@ JWT_SECRET=your_jwt_secret_here
 EXTENSION_ID=your_extension_id
 EXTENSION_VERSION=1.0.0
 EOF
-    
+
     print_success "Sample .env file created: $ENV_FILE"
     print_warning "Please update the JWT_SECRET and EXTENSION_ID values before using"
 }
@@ -249,14 +249,14 @@ EOF
 main() {
     print_status "Starting PostgreSQL installation for Playwright-CRX..."
     echo "=============================================================="
-    
+
     # Check if running as root
     check_root
-    
+
     # Detect distribution
     DISTRO=$(detect_distribution)
     print_status "Detected distribution: $DISTRO"
-    
+
     # Check if PostgreSQL is already installed
     if check_postgresql_installed; then
         print_warning "PostgreSQL is already installed"
@@ -281,21 +281,21 @@ main() {
                 ;;
         esac
     fi
-    
+
     # Configure PostgreSQL
     configure_postgresql
-    
+
     # Create database and user
     create_database_and_user
-    
+
     # Test PostgreSQL connection
     if test_postgresql_connection; then
         # Display connection information
         display_connection_info
-        
+
         # Create sample .env file
         create_env_file
-        
+
         print_success "PostgreSQL installation and setup completed successfully!"
         echo "=============================================================="
         print_status "Next steps:"

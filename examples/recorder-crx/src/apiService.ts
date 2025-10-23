@@ -94,10 +94,10 @@ export class ApiService {
    */
   setTokens(accessToken: string, refreshToken: string): void {
     this.tokens = { accessToken, refreshToken };
-    
+
     // Save to storage for persistence
-    chrome.storage.local.set({ 
-      auth_tokens: { accessToken, refreshToken } 
+    chrome.storage.local.set({
+      auth_tokens: { accessToken, refreshToken }
     }).catch(() => {});
   }
 
@@ -138,21 +138,21 @@ export class ApiService {
    */
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.config.baseUrl}${endpoint}`;
-    
+
     // Add authentication header if available
     const headers = new Headers(options.headers || {});
     if (this.tokens && this.tokens.accessToken) {
       headers.set('Authorization', `Bearer ${this.tokens.accessToken}`);
     }
     headers.set('Content-Type', 'application/json');
-    
+
     const config: RequestInit = {
       ...options,
       headers
     };
-    
+
     const response = await fetch(url, config);
-    
+
     if (!response.ok) {
       if (response.status === 401) {
         // Token might be expired, clear it
@@ -162,7 +162,7 @@ export class ApiService {
       const errorText = await response.text().catch(() => response.statusText);
       throw new Error(`API request failed: ${errorText}`);
     }
-    
+
     return response.json();
   }
 
@@ -174,11 +174,11 @@ export class ApiService {
       method: 'POST',
       body: JSON.stringify({ email, password, name })
     });
-    
+
     if (!response || !response.accessToken || !response.refreshToken) {
       throw new Error('Invalid registration response');
     }
-    
+
     this.setTokens(response.accessToken, response.refreshToken);
     return response;
   }
@@ -191,11 +191,11 @@ export class ApiService {
       method: 'POST',
       body: JSON.stringify({ email, password })
     });
-    
+
     if (!response || !response.accessToken || !response.refreshToken) {
       throw new Error('Invalid login response');
     }
-    
+
     this.setTokens(response.accessToken, response.refreshToken);
     return response;
   }
@@ -207,16 +207,16 @@ export class ApiService {
     if (!this.tokens || !this.tokens.refreshToken) {
       throw new Error('No refresh token available');
     }
-    
+
     const response = await this.request<{ accessToken: string }>('/auth/refresh', {
       method: 'POST',
       body: JSON.stringify({ refreshToken: this.tokens.refreshToken })
     });
-    
+
     if (!response || !response.accessToken) {
       throw new Error('Invalid refresh token response');
     }
-    
+
     // Keep the same refresh token, only update access token
     this.setTokens(response.accessToken, this.tokens.refreshToken);
     return { accessToken: response.accessToken, refreshToken: this.tokens.refreshToken };
@@ -236,7 +236,7 @@ export class ApiService {
         console.error('Error during logout:', error);
       }
     }
-    
+
     this.clearTokens();
   }
 
@@ -362,16 +362,16 @@ export class ApiService {
     if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
       return;
     }
-    
+
     this.websocket = new WebSocket(this.config.wsUrl);
-    
+
     this.websocket.onopen = () => {
       console.log('WebSocket connected');
       if (this.tokens && this.tokens.accessToken) {
         this.sendMessage('auth', { token: this.tokens.accessToken });
       }
     };
-    
+
     this.websocket.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
@@ -383,11 +383,11 @@ export class ApiService {
         console.error('Error parsing WebSocket message:', error);
       }
     };
-    
+
     this.websocket.onclose = () => {
       console.log('WebSocket disconnected');
     };
-    
+
     this.websocket.onerror = (error) => {
       console.error('WebSocket error:', error);
     };

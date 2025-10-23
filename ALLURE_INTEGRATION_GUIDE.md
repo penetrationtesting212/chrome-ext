@@ -1,7 +1,7 @@
 # 📊 ALLURE REPORTING INTEGRATION GUIDE
 
-**Feature**: Automated Allure Report Generation for Playwright Test Execution  
-**Status**: ✅ Fully Integrated  
+**Feature**: Automated Allure Report Generation for Playwright Test Execution
+**Status**: ✅ Fully Integrated
 **Date**: 2025-10-23
 
 ---
@@ -12,13 +12,13 @@ Allure is now fully integrated into the Playwright-CRX dashboard, providing beau
 
 ### **Key Features**
 
-✅ Automatic report generation after test execution  
-✅ Interactive HTML reports with charts and graphs  
-✅ Step-by-step test execution details  
-✅ Screenshots and attachments support  
-✅ Historical trend analysis  
-✅ One-click report viewing in dashboard  
-✅ Report persistence and management  
+✅ Automatic report generation after test execution
+✅ Interactive HTML reports with charts and graphs
+✅ Step-by-step test execution details
+✅ Screenshots and attachments support
+✅ Historical trend analysis
+✅ One-click report viewing in dashboard
+✅ Report persistence and management
 
 ---
 
@@ -248,7 +248,7 @@ sequenceDiagram
     end
     B->>A: endTest()
     A-->>B: Results saved
-    
+
     U->>D: View Test Runs
     D->>D: Show "Generate Report"
     U->>D: Click Generate
@@ -457,13 +457,13 @@ Example `{testRunId}-result.json`:
 
 ## 📞 SUPPORT
 
-**Documentation**: This file  
-**API Docs**: http://localhost:3000/api-docs  
-**Allure Docs**: https://docs.qameta.io/allure/  
+**Documentation**: This file
+**API Docs**: http://localhost:3000/api-docs
+**Allure Docs**: https://docs.qameta.io/allure/
 
 ---
 
-**Created**: 2025-10-23  
-**Version**: 1.0.0  
-**Status**: ✅ Production Ready  
+**Created**: 2025-10-23
+**Version**: 1.0.0
+**Status**: ✅ Production Ready
 **Integration**: Complete

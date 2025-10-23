@@ -2,9 +2,9 @@
 
 ## 📋 Current Status
 
-❌ **PostgreSQL NOT installed** on your system  
-❌ **Database NOT created**  
-❌ **Migrations NOT run**  
+❌ **PostgreSQL NOT installed** on your system
+❌ **Database NOT created**
+❌ **Migrations NOT run**
 
 ---
 
@@ -251,8 +251,8 @@ $env:Path += ";C:\Program Files\PostgreSQL\15\bin"
 
 # Make it permanent:
 [Environment]::SetEnvironmentVariable(
-    "Path", 
-    $env:Path + ";C:\Program Files\PostgreSQL\15\bin", 
+    "Path",
+    $env:Path + ";C:\Program Files\PostgreSQL\15\bin",
     [EnvironmentVariableTarget]::User
 )
 

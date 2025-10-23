@@ -1,6 +1,6 @@
 # 🔌 API Testing Suite - User Guide
 
-**Version**: 1.0.0  
+**Version**: 1.0.0
 **Date**: 2025-10-23
 
 ---
@@ -27,12 +27,12 @@ The API Testing Suite is an advanced feature of the Playwright-CRX extension tha
 
 ### Key Benefits
 
-✅ **Record & Replay** - Capture real API traffic and convert to test cases  
-✅ **Assertions** - Validate status codes, headers, body content, and response times  
-✅ **Mocking** - Stub API responses for offline testing  
-✅ **Performance** - Benchmark API response times and track degradation  
-✅ **Contract Testing** - Validate API contracts between services  
-✅ **Multi-Language** - Generate tests in TypeScript, Python, Java, and more  
+✅ **Record & Replay** - Capture real API traffic and convert to test cases
+✅ **Assertions** - Validate status codes, headers, body content, and response times
+✅ **Mocking** - Stub API responses for offline testing
+✅ **Performance** - Benchmark API response times and track degradation
+✅ **Contract Testing** - Validate API contracts between services
+✅ **Multi-Language** - Generate tests in TypeScript, Python, Java, and more
 
 ---
 
@@ -410,31 +410,31 @@ class ApiTest {
 
 ### Recording Best Practices
 
-✅ **Start Fresh** - Clear captured requests before each recording session  
-✅ **Focus on APIs** - Filter captures to relevant API endpoints  
-✅ **Meaningful Names** - Use descriptive test case names  
-✅ **Incremental Testing** - Create tests for one feature at a time  
+✅ **Start Fresh** - Clear captured requests before each recording session
+✅ **Focus on APIs** - Filter captures to relevant API endpoints
+✅ **Meaningful Names** - Use descriptive test case names
+✅ **Incremental Testing** - Create tests for one feature at a time
 
 ### Assertion Best Practices
 
-✅ **Multiple Assertions** - Validate status, headers, and body  
-✅ **Specific Checks** - Use JSON path for nested data  
-✅ **Performance SLAs** - Always include response time assertions  
-✅ **Error Cases** - Test both success and error responses  
+✅ **Multiple Assertions** - Validate status, headers, and body
+✅ **Specific Checks** - Use JSON path for nested data
+✅ **Performance SLAs** - Always include response time assertions
+✅ **Error Cases** - Test both success and error responses
 
 ### Mocking Best Practices
 
-✅ **Realistic Data** - Use production-like mock responses  
-✅ **Version Control** - Store mocks in version control  
-✅ **Clear Naming** - Name mocks descriptively  
-✅ **Disable When Done** - Turn off mocks after testing  
+✅ **Realistic Data** - Use production-like mock responses
+✅ **Version Control** - Store mocks in version control
+✅ **Clear Naming** - Name mocks descriptively
+✅ **Disable When Done** - Turn off mocks after testing
 
 ### Benchmarking Best Practices
 
-✅ **Consistent Environment** - Run in similar network conditions  
-✅ **Multiple Iterations** - Use at least 10 iterations  
-✅ **Warm-up Requests** - Discard first few requests  
-✅ **Track Trends** - Monitor performance over time  
+✅ **Consistent Environment** - Run in similar network conditions
+✅ **Multiple Iterations** - Use at least 10 iterations
+✅ **Warm-up Requests** - Discard first few requests
+✅ **Track Trends** - Monitor performance over time
 
 ---
 
@@ -636,17 +636,17 @@ Found a bug or have a feature request?
 
 The API Testing Suite provides comprehensive API testing capabilities:
 
-✅ **Record** real API traffic  
-✅ **Validate** responses with assertions  
-✅ **Mock** APIs for offline testing  
-✅ **Benchmark** performance metrics  
-✅ **Test** contracts between services  
-✅ **Generate** code in multiple languages  
+✅ **Record** real API traffic
+✅ **Validate** responses with assertions
+✅ **Mock** APIs for offline testing
+✅ **Benchmark** performance metrics
+✅ **Test** contracts between services
+✅ **Generate** code in multiple languages
 
 Start testing your APIs alongside your UI tests for complete end-to-end coverage! 🚀
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: 2025-10-23  
+**Version**: 1.0.0
+**Last Updated**: 2025-10-23
 **Status**: Production Ready ✅

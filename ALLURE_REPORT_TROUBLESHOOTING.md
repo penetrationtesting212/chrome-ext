@@ -139,9 +139,9 @@ dir C:\play-crx-feature-test-execution\playwright-crx-enhanced\backend\allure-re
 ### Check Database
 Report URL should be saved:
 ```sql
-SELECT id, status, allureReportUrl 
-FROM "TestRun" 
-ORDER BY "startedAt" DESC 
+SELECT id, status, allureReportUrl
+FROM "TestRun"
+ORDER BY "startedAt" DESC
 LIMIT 5;
 ```
 
@@ -152,7 +152,7 @@ Should show: `/allure-reports/{testRunId}/index.html`
 ## ❓ Common Issues
 
 ### Issue 1: "No test runs visible in dashboard"
-**Solution**: 
+**Solution**:
 - Refresh the page
 - Check you're logged in with correct user
 - Execute a new test from extension or API
@@ -216,7 +216,7 @@ For more details, see:
 
 **The Problem**: You executed a Playwright script but didn't manually trigger report generation.
 
-**The Solution**: 
+**The Solution**:
 1. Go to dashboard → Test Runs tab
 2. Click "📊 Generate Report" button
 3. Wait for generation

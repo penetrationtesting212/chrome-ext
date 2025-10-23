@@ -31,15 +31,15 @@ export const SelfHealingManager: React.FC<SelfHealingManagerProps> = ({ onSugges
   // Load suggestions on component mount
   React.useEffect(() => {
     loadSuggestions();
-    
+
     // Start listening for real data
     realDataIntegration.startListening();
-    
+
     // Simulate some test executions for demonstration
     setTimeout(() => {
       realDataIntegration.simulateTestExecution('demo-script-1', true);
     }, 2000);
-    
+
     return () => {
       realDataIntegration.stopListening();
     };
@@ -50,13 +50,13 @@ export const SelfHealingManager: React.FC<SelfHealingManagerProps> = ({ onSugges
     try {
       // Get real statistics from integration service
       const realStats = await realDataIntegration.getRealHealingStatistics();
-      
+
       // Get traditional service statistics
       const traditionalStats = await selfHealingService.getStatistics();
-      
+
       // Get suggestions
       const healingSuggestions = await selfHealingService.getSuggestions();
-      
+
       // Combine real and traditional statistics
       const combinedStats = {
         total: realStats.totalTests + traditionalStats.total,
@@ -68,7 +68,7 @@ export const SelfHealingManager: React.FC<SelfHealingManagerProps> = ({ onSugges
         aiSuccessRate: realStats.successRate,
         visualSimilarityAvg: traditionalStats.visualSimilarityAvg
       };
-      
+
       setSuggestions(healingSuggestions);
       setStatistics(combinedStats);
     } catch (error) {
@@ -84,10 +84,10 @@ export const SelfHealingManager: React.FC<SelfHealingManagerProps> = ({ onSugges
       const success = await selfHealingService.approveSuggestion(id);
       if (success) {
         // Update local state
-        setSuggestions(prev => 
+        setSuggestions(prev =>
           prev.map(s => s.id === id ? { ...s, status: 'approved' } : s)
         );
-        
+
         // Notify parent
         const suggestion = suggestions.find(s => s.id === id);
         if (suggestion && onSuggestionApproved) {
@@ -107,7 +107,7 @@ export const SelfHealingManager: React.FC<SelfHealingManagerProps> = ({ onSugges
       const success = await selfHealingService.rejectSuggestion(id);
       if (success) {
         // Update local state
-        setSuggestions(prev => 
+        setSuggestions(prev =>
           prev.map(s => s.id === id ? { ...s, status: 'rejected' } : s)
         );
       }
@@ -135,7 +135,7 @@ export const SelfHealingManager: React.FC<SelfHealingManagerProps> = ({ onSugges
           )}
         </div>
       </div>
-      
+
       {pendingSuggestions.length > 0 && (
         <div className="suggestions-section">
           <h4>Pending ({pendingSuggestions.length})</h4>
@@ -158,14 +158,14 @@ export const SelfHealingManager: React.FC<SelfHealingManagerProps> = ({ onSugges
                   </div>
                 </div>
                 <div className="suggestion-actions">
-                  <button 
+                  <button
                     onClick={() => handleApprove(suggestion.id)}
                     disabled={loading}
                     className="approve-btn"
                   >
                     Approve
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleReject(suggestion.id)}
                     disabled={loading}
                     className="reject-btn"
@@ -178,7 +178,7 @@ export const SelfHealingManager: React.FC<SelfHealingManagerProps> = ({ onSugges
           </div>
         </div>
       )}
-      
+
       {approvedSuggestions.length > 0 && (
         <div className="suggestions-section">
           <h4>Approved ({approvedSuggestions.length})</h4>
@@ -206,7 +206,7 @@ export const SelfHealingManager: React.FC<SelfHealingManagerProps> = ({ onSugges
           </div>
         </div>
       )}
-      
+
       {rejectedSuggestions.length > 0 && (
         <div className="suggestions-section">
           <h4>Rejected ({rejectedSuggestions.length})</h4>
@@ -234,7 +234,7 @@ export const SelfHealingManager: React.FC<SelfHealingManagerProps> = ({ onSugges
           </div>
         </div>
       )}
-      
+
       {suggestions.length === 0 && !loading && (
         <p>No self-healing suggestions found.</p>
       )}

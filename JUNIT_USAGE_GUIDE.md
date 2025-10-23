@@ -145,7 +145,7 @@ gradle init --type java-application
     <artifactId>playwright</artifactId>
     <version>1.48.0</version>
   </dependency>
-  
+
   <!-- JUnit 5 -->
   <dependency>
     <groupId>org.junit.jupiter</groupId>
@@ -178,7 +178,7 @@ gradle init --type java-application
 dependencies {
     // Playwright
     testImplementation 'com.microsoft.playwright:playwright:1.48.0'
-    
+
     // JUnit 5
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.1'
@@ -346,7 +346,7 @@ void testExample() {
 ```java
 public class TestExample {
   // ... setup code ...
-  
+
   @Test
   void testLogin() {
     page.goto("https://example.com/login");
@@ -355,7 +355,7 @@ public class TestExample {
     page.locator("button[type='submit']").click();
     assertThat(page).hasURL("https://example.com/dashboard");
   }
-  
+
   @Test
   void testSearch() {
     page.goto("https://example.com");
@@ -363,7 +363,7 @@ public class TestExample {
     page.locator("button.search").click();
     assertThat(page.locator(".results")).containsText("playwright");
   }
-  
+
   @Test
   void testCheckout() {
     page.goto("https://example.com/products");
@@ -435,15 +435,15 @@ import org.junit.jupiter.api.Order;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class TestExample {
-  
+
   @Test
   @Order(1)
   void testFirst() { }
-  
+
   @Test
   @Order(2)
   void testSecond() { }
-  
+
   @Test
   @Order(3)
   void testThird() { }
@@ -460,12 +460,12 @@ public class TestExample {
 @BeforeAll
 static void setUpClass() {
   playwright = Playwright.create();
-  
+
   // Launch with options
   BrowserType.LaunchOptions options = new BrowserType.LaunchOptions()
     .setHeadless(false)        // Show browser
     .setSlowMo(1000);          // Slow down by 1 second
-  
+
   browser = playwright.chromium().launch(options);
 }
 ```
@@ -481,7 +481,7 @@ void setUp() {
     .setUserAgent("Custom User Agent")
     .setLocale("en-US")
     .setTimezoneId("America/New_York");
-  
+
   context = browser.newContext(options);
   page = context.newPage();
 }
@@ -495,7 +495,7 @@ void setUp() {
   Browser.NewContextOptions options = new Browser.NewContextOptions()
     .setRecordVideoDir(Paths.get("videos/"))
     .setRecordVideoSize(1280, 720);
-  
+
   context = browser.newContext(options);
   page = context.newPage();
 }
@@ -526,7 +526,7 @@ public class TestExample {
   @Test void testExample() { }
   @AfterEach void tearDown() { }
   @AfterAll static void tearDownClass() { }
-  
+
   // Multiple tests
   // Automatic lifecycle management
   // Assertions and reporting
@@ -594,7 +594,7 @@ public class TodoMVCTest {
   void testAddTodo() {
     page.locator("input.new-todo").fill("Buy groceries");
     page.locator("input.new-todo").press("Enter");
-    
+
     assertThat(page.locator(".todo-list li")).hasText("Buy groceries");
     assertThat(page.locator(".todo-count")).hasText("1 item left");
   }
@@ -605,7 +605,7 @@ public class TodoMVCTest {
     page.locator("input.new-todo").fill("Task to complete");
     page.locator("input.new-todo").press("Enter");
     page.locator(".toggle").check();
-    
+
     assertThat(page.locator(".todo-list li")).hasClass("completed");
     assertThat(page.locator(".todo-count")).hasText("0 items left");
   }
@@ -617,7 +617,7 @@ public class TodoMVCTest {
     page.locator("input.new-todo").press("Enter");
     page.locator(".todo-list li").hover();
     page.locator(".destroy").click();
-    
+
     assertThat(page.locator(".todo-list li")).hasCount(0);
   }
 }
@@ -632,7 +632,7 @@ mvn test
 ```
 TodoMVC Application Tests
   ✓ Should add a new todo item
-  ✓ Should complete a todo item  
+  ✓ Should complete a todo item
   ✓ Should delete a todo item
 
 Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
@@ -644,12 +644,12 @@ Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
 
 ### **JUnit in Playwright-CRX:**
 
-✅ **Select** JUnit from language dropdown  
-✅ **Record** your tests  
-✅ **Copy** generated code  
-✅ **Add** to Java project  
-✅ **Run** with Maven/Gradle/IDE  
-✅ **Integrate** with CI/CD  
+✅ **Select** JUnit from language dropdown
+✅ **Record** your tests
+✅ **Copy** generated code
+✅ **Add** to Java project
+✅ **Run** with Maven/Gradle/IDE
+✅ **Integrate** with CI/CD
 
 ### **Key Benefits:**
 

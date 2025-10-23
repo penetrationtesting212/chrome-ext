@@ -60,7 +60,7 @@ export const ApiTestingUI: React.FC<ApiTestingUIProps> = ({ onClose }) => {
     setIsRecording(true);
     apiTestingService.clearCapturedRequests();
     setCapturedRequests([]);
-    
+
     // In a real implementation, this would start intercepting network requests
     // through the background script or content script
     chrome.runtime.sendMessage({ type: 'startApiRecording' });

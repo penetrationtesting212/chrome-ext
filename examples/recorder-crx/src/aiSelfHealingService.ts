@@ -14,24 +14,24 @@ export interface LocatorFeatures {
   hasPlaceholder: boolean;
   hasText: boolean;
   hasClass: boolean;
-  
+
   // Content features
   textLength: number;
   textWordCount: number;
   hasNumericText: boolean;
   hasSpecialChars: boolean;
-  
+
   // Position features
   depth: number;
   siblingCount: number;
   indexAmongSiblings: number;
-  
+
   // Style features
   isVisible: boolean;
   isClickable: boolean;
   hasUniqueColor: boolean;
   hasUniqueSize: boolean;
-  
+
   // Dynamic patterns
   hasNumericId: boolean;
   hasCssModuleClass: boolean;
@@ -58,16 +58,16 @@ export interface VisualFingerprint {
   fontWeight: string;
   border: string;
   borderRadius: string;
-  
+
   // Position
   x: number;
   y: number;
   zIndex: number;
-  
+
   // Content
   text: string;
   textHash: string;
-  
+
   // Computed hash
   visualHash: string;
 }
@@ -124,7 +124,7 @@ export class AISelfHealingService {
   public extractFeatures(element: Element, locator: string): LocatorFeatures {
     const computedStyle = window.getComputedStyle(element);
     const rect = element.getBoundingClientRect();
-    
+
     // Structural features
     const features: LocatorFeatures = {
       elementType: element.tagName.toLowerCase(),
@@ -136,24 +136,24 @@ export class AISelfHealingService {
       hasPlaceholder: !!element.getAttribute('placeholder'),
       hasText: !!(element.textContent?.trim()),
       hasClass: !!element.className,
-      
+
       // Content features
       textLength: element.textContent?.length || 0,
       textWordCount: element.textContent?.trim().split(/\s+/).length || 0,
       hasNumericText: /\d/.test(element.textContent || ''),
       hasSpecialChars: /[!@#$%^&*(),.?":{}|<>]/.test(element.textContent || ''),
-      
+
       // Position features
       depth: this.getElementDepth(element),
       siblingCount: element.parentElement?.children.length || 0,
       indexAmongSiblings: Array.from(element.parentElement?.children || []).indexOf(element),
-      
+
       // Style features
       isVisible: computedStyle.display !== 'none' && computedStyle.visibility !== 'hidden',
       isClickable: ['button', 'a', 'input', 'select', 'textarea'].includes(element.tagName.toLowerCase()),
       hasUniqueColor: this.isUniqueColor(computedStyle.color),
       hasUniqueSize: this.isUniqueSize(rect.width, rect.height),
-      
+
       // Dynamic patterns
       hasNumericId: /\d{6,}/.test(element.id || ''),
       hasCssModuleClass: /^css-\w+/.test(element.className || ''),
@@ -171,29 +171,29 @@ export class AISelfHealingService {
   async createVisualFingerprint(element: Element): Promise<VisualFingerprint> {
     const computedStyle = window.getComputedStyle(element);
     const rect = element.getBoundingClientRect();
-    
+
     // Create a canvas for visual hash generation
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Cannot create canvas context');
-    
+
     canvas.width = Math.min(rect.width, 100);
     canvas.height = Math.min(rect.height, 100);
-    
+
     // Draw element representation
     ctx.fillStyle = computedStyle.backgroundColor || '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     // Draw text if present
     if (element.textContent) {
       ctx.fillStyle = computedStyle.color || '#000000';
       ctx.font = `${computedStyle.fontSize} ${computedStyle.fontFamily}`;
       ctx.fillText(element.textContent.substring(0, 20), 5, 20);
     }
-    
+
     // Generate hash from canvas
     const visualHash = await this.canvasToHash(canvas);
-    
+
     const fingerprint: VisualFingerprint = {
       width: rect.width,
       height: rect.height,
@@ -211,11 +211,11 @@ export class AISelfHealingService {
       textHash: this.hashString(element.textContent || ''),
       visualHash
     };
-    
+
     // Cache the fingerprint
     const elementId = this.generateElementId(element);
     this.visualCache.set(elementId, fingerprint);
-    
+
     return fingerprint;
   }
 
@@ -225,36 +225,36 @@ export class AISelfHealingService {
   async compareVisualSimilarity(element1: Element, element2: Element): Promise<number> {
     const fp1 = await this.createVisualFingerprint(element1);
     const fp2 = await this.createVisualFingerprint(element2);
-    
+
     // Calculate similarity score (0-1)
     let similarity = 0;
     let factors = 0;
-    
+
     // Visual hash comparison (40% weight)
     const hashSimilarity = this.compareHashes(fp1.visualHash, fp2.visualHash);
     similarity += hashSimilarity * 0.4;
     factors += 0.4;
-    
+
     // Size similarity (20% weight)
     const sizeSimilarity = this.calculateSizeSimilarity(fp1, fp2);
     similarity += sizeSimilarity * 0.2;
     factors += 0.2;
-    
+
     // Style similarity (20% weight)
     const styleSimilarity = this.calculateStyleSimilarity(fp1, fp2);
     similarity += styleSimilarity * 0.2;
     factors += 0.2;
-    
+
     // Position similarity (10% weight)
     const positionSimilarity = this.calculatePositionSimilarity(fp1, fp2);
     similarity += positionSimilarity * 0.1;
     factors += 0.1;
-    
+
     // Text similarity (10% weight)
     const textSimilarity = this.calculateTextSimilarity(fp1.text, fp2.text);
     similarity += textSimilarity * 0.1;
     factors += 0.1;
-    
+
     return factors > 0 ? similarity / factors : 0;
   }
 
@@ -268,7 +268,7 @@ export class AISelfHealingService {
   }> {
     const features = this.extractFeatures(element, locator);
     const prediction = this.mlModel.predict(features);
-    
+
     return {
       confidence: prediction,
       features,
@@ -293,31 +293,31 @@ export class AISelfHealingService {
     if (!this.config.enabled) {
       throw new Error('Auto-healing is disabled');
     }
-    
+
     // Get healing history for this context
     const historyKey = this.generateHistoryKey(failedLocator, context);
     const history = this.healingHistory.get(historyKey) || [];
-    
+
     // Try alternative locators
     const alternatives = await this.generateAlternativeLocators(element);
-    
+
     for (const alternative of alternatives) {
       // Predict success using ML
       const prediction = await this.predictLocatorSuccess(element, alternative.locator);
-      
+
       // Check if we have successful history with this alternative
-      const successfulHistory = history.filter(h => 
+      const successfulHistory = history.filter(h =>
         h.healedLocator === alternative.locator && h.success
       );
-      
+
       // Boost confidence based on historical success
       const historicalBoost = successfulHistory.length > 0 ? 0.1 : 0;
       const finalConfidence = Math.min(1.0, prediction.confidence + historicalBoost);
-      
+
       // Determine if auto-apply
-      const autoApply = finalConfidence >= this.config.confidenceThreshold && 
+      const autoApply = finalConfidence >= this.config.confidenceThreshold &&
                        this.config.autoApproveHighConfidence;
-      
+
       if (finalConfidence >= this.config.confidenceThreshold) {
         // Record healing attempt
         const healingRecord: HealingHistory = {
@@ -332,11 +332,11 @@ export class AISelfHealingService {
             elementType: alternative.locator.split(/[#.\[\]]/)[0] || 'unknown'
           }
         };
-        
+
         history.push(healingRecord);
         this.healingHistory.set(historyKey, history);
         this.saveHistory();
-        
+
         return {
           healedLocator: alternative.locator,
           confidence: finalConfidence,
@@ -345,7 +345,7 @@ export class AISelfHealingService {
         };
       }
     }
-    
+
     throw new Error('No suitable alternative locator found');
   }
 
@@ -366,19 +366,19 @@ export class AISelfHealingService {
         break;
       }
     }
-    
+
     if (!healingRecord) {
       throw new Error('Healing record not found');
     }
-    
+
     // Update the record
     healingRecord.success = success;
-    
+
     // If failed, check if rollback is needed
     if (!success) {
       const historyKey = this.generateHistoryKey(healingRecord.originalLocator, healingRecord.context);
       const history = this.healingHistory.get(historyKey) || [];
-      
+
       // Count recent failures for this healed locator
       const recentFailures = history
         .filter(h => h.healedLocator === healingRecord.healedLocator)
@@ -387,21 +387,21 @@ export class AISelfHealingService {
           return daysDiff <= 7; // Last 7 days
         })
         .filter(h => !h.success);
-      
+
       // Auto-rollback if too many failures
       if (recentFailures.length >= this.config.rollbackAfterFailures) {
         healingRecord.rollback = {
           timestamp: new Date(),
           reason: `Auto-rollback after ${recentFailures.length} failures`
         };
-        
+
         // Mark this locator as unreliable
         await this.markLocatorUnreliable(healingRecord.healedLocator);
       }
     }
-    
+
     this.saveHistory();
-    
+
     // Retrain ML model with new data
     if (healingRecord.context) {
       const element = await this.findElementByLocator(healingRecord.healedLocator);
@@ -418,58 +418,58 @@ export class AISelfHealingService {
    */
   private async generateAlternativeLocators(element: Element): Promise<Array<{ locator: string; strategy: string }>> {
     const alternatives: Array<{ locator: string; strategy: string }> = [];
-    
+
     // Strategy 1: Test ID (highest priority)
     const testId = element.getAttribute('data-testid') || element.getAttribute('data-test');
     if (testId) {
       alternatives.push({ locator: `[data-testid="${testId}"]`, strategy: 'testid' });
     }
-    
+
     // Strategy 2: ID (if not dynamic)
     if (element.id && !this.isDynamicId(element.id)) {
       alternatives.push({ locator: `#${element.id}`, strategy: 'id' });
     }
-    
+
     // Strategy 3: ARIA attributes
     const ariaLabel = element.getAttribute('aria-label');
     if (ariaLabel) {
       alternatives.push({ locator: `[aria-label="${ariaLabel}"]`, strategy: 'aria' });
     }
-    
+
     // Strategy 4: Role
     const role = element.getAttribute('role');
     if (role) {
       alternatives.push({ locator: `[role="${role}"]`, strategy: 'role' });
     }
-    
+
     // Strategy 5: Name attribute
     const name = element.getAttribute('name');
     if (name) {
       alternatives.push({ locator: `[name="${name}"]`, strategy: 'name' });
     }
-    
+
     // Strategy 6: Placeholder
     const placeholder = element.getAttribute('placeholder');
     if (placeholder) {
       alternatives.push({ locator: `[placeholder="${placeholder}"]`, strategy: 'placeholder' });
     }
-    
+
     // Strategy 7: Text content (if short)
     const text = element.textContent?.trim();
     if (text && text.length < 50) {
       alternatives.push({ locator: `${element.tagName.toLowerCase()}:has-text("${text}")`, strategy: 'text' });
     }
-    
+
     // Strategy 8: CSS class (if not dynamic)
     if (element.className && !this.isDynamicClass(element.className)) {
       const firstClass = element.className.split(' ')[0];
       alternatives.push({ locator: `${element.tagName.toLowerCase()}.${firstClass}`, strategy: 'css' });
     }
-    
+
     // Strategy 9: XPath with context
     const xpath = this.generateSmartXPath(element);
     alternatives.push({ locator: xpath, strategy: 'xpath' });
-    
+
     return alternatives;
   }
 
@@ -485,28 +485,28 @@ export class AISelfHealingService {
     topStrategies: Array<{ strategy: string; count: number; successRate: number }>;
   }> {
     const allHealings: HealingHistory[] = [];
-    
+
     for (const history of this.healingHistory.values()) {
       allHealings.push(...history);
     }
-    
+
     const totalHealings = allHealings.length;
     const successfulHealings = allHealings.filter(h => h.success).length;
     const successRate = totalHealings > 0 ? successfulHealings / totalHealings : 0;
-    
+
     const autoAppliedHealings = allHealings.filter(h => h.confidence >= this.config.confidenceThreshold).length;
     const autoHealRate = totalHealings > 0 ? autoAppliedHealings / totalHealings : 0;
-    
+
     const rolledBackHealings = allHealings.filter(h => h.rollback).length;
     const rollbackRate = totalHealings > 0 ? rolledBackHealings / totalHealings : 0;
-    
-    const avgConfidence = totalHealings > 0 
-      ? allHealings.reduce((sum, h) => sum + h.confidence, 0) / totalHealings 
+
+    const avgConfidence = totalHealings > 0
+      ? allHealings.reduce((sum, h) => sum + h.confidence, 0) / totalHealings
       : 0;
-    
+
     // Calculate strategy statistics
     const strategyStats = new Map<string, { count: number; successes: number }>();
-    
+
     for (const healing of allHealings) {
       const strategy = this.extractStrategyFromLocator(healing.healedLocator);
       if (!strategyStats.has(strategy)) {
@@ -518,7 +518,7 @@ export class AISelfHealingService {
         stats.successes++;
       }
     }
-    
+
     const topStrategies = Array.from(strategyStats.entries())
       .map(([strategy, stats]) => ({
         strategy,
@@ -527,7 +527,7 @@ export class AISelfHealingService {
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
-    
+
     return {
       totalHealings,
       successRate,
@@ -562,8 +562,8 @@ export class AISelfHealingService {
       { w: 150, h: 30 },  // Small button
       { w: 300, h: 150 }, // Standard input
     ];
-    
-    return !commonSizes.some(size => 
+
+    return !commonSizes.some(size =>
       Math.abs(width - size.w) < 10 && Math.abs(height - size.h) < 10
     );
   }
@@ -618,10 +618,10 @@ export class AISelfHealingService {
   private calculateTextSimilarity(text1: string, text2: string): number {
     // Simple Levenshtein distance
     const matrix = Array(text2.length + 1).fill(null).map(() => Array(text1.length + 1).fill(null));
-    
+
     for (let i = 0; i <= text2.length; i++) matrix[i][0] = i;
     for (let j = 0; j <= text1.length; j++) matrix[0][j] = j;
-    
+
     for (let i = 1; i <= text2.length; i++) {
       for (let j = 1; j <= text1.length; j++) {
         const cost = text1[j - 1] === text2[i - 1] ? 0 : 1;
@@ -632,7 +632,7 @@ export class AISelfHealingService {
         );
       }
     }
-    
+
     const distance = matrix[text2.length][text1.length];
     const maxLength = Math.max(text1.length, text2.length);
     return maxLength > 0 ? 1 - (distance / maxLength) : 1;
@@ -651,36 +651,36 @@ export class AISelfHealingService {
   }
 
   private isDynamicId(id: string): boolean {
-    return /\d{6,}/.test(id) || 
+    return /\d{6,}/.test(id) ||
            /timestamp|uid|uuid|random/i.test(id) ||
            /css-\w+/.test(id);
   }
 
   private isDynamicClass(className: string): boolean {
-    return /^css-\w+/.test(className) || 
+    return /^css-\w+/.test(className) ||
            /\d{6,}/.test(className);
   }
 
   private generateSmartXPath(element: Element): string {
     const path: string[] = [];
     let current: Element | null = element;
-    
+
     while (current && current.nodeType === Node.ELEMENT_NODE) {
       const tagName = current.tagName.toLowerCase();
       const index = Array.from(current.parentElement?.children || [])
         .filter(el => current && el.tagName === current.tagName)
         .indexOf(current) + 1;
-      
+
       if (current.id && !this.isDynamicId(current.id)) {
         path.push(`//*[@id="${current.id}"]`);
         break;
       } else {
         path.push(`/${tagName}[${index}]`);
       }
-      
+
       current = current.parentElement;
     }
-    
+
     return path.reverse().join('');
   }
 
@@ -712,7 +712,7 @@ export class AISelfHealingService {
       } else if (locator.startsWith('//')) {
         return document.evaluate(locator, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null)?.singleNodeValue as Element;
       }
-      
+
       return document.querySelector(locator);
     } catch {
       return null;
@@ -802,45 +802,45 @@ class SimpleMLModel implements MLModel {
       // Default prediction based on heuristics
       return this.heuristicPrediction(features);
     }
-    
+
     // Simple linear regression
     const featureVector = this.featuresToVector(features);
     let sum = this.bias;
-    
+
     for (let i = 0; i < featureVector.length; i++) {
       sum += featureVector[i] * (this.weights[i] || 0);
     }
-    
+
     // Sigmoid activation
     return 1 / (1 + Math.exp(-sum));
   }
 
   train(trainingData: { features: LocatorFeatures; label: number }[]): void {
     if (trainingData.length === 0) return;
-    
+
     // Simple gradient descent
     const learningRate = 0.01;
     const epochs = 100;
-    
+
     // Initialize weights
     const featureCount = this.featuresToVector(trainingData[0].features).length;
     this.weights = Array(featureCount).fill(0.1);
     this.bias = 0;
-    
+
     for (let epoch = 0; epoch < epochs; epoch++) {
       for (const sample of trainingData) {
         const featureVector = this.featuresToVector(sample.features);
-        
+
         // Forward pass
         let prediction = this.bias;
         for (let i = 0; i < featureVector.length; i++) {
           prediction += featureVector[i] * this.weights[i];
         }
         prediction = 1 / (1 + Math.exp(-prediction));
-        
+
         // Backward pass
         const error = sample.label - prediction;
-        
+
         // Update weights
         for (let i = 0; i < featureVector.length; i++) {
           this.weights[i] += learningRate * error * featureVector[i];
@@ -848,7 +848,7 @@ class SimpleMLModel implements MLModel {
         this.bias += learningRate * error;
       }
     }
-    
+
     this.isTrained = true;
   }
 
@@ -870,29 +870,29 @@ class SimpleMLModel implements MLModel {
 
   private heuristicPrediction(features: LocatorFeatures): number {
     let score = 0.5;
-    
+
     // Boost for stable identifiers
     if (features.hasTestId) score += 0.3;
     if (features.hasId && !features.hasNumericId) score += 0.25;
     if (features.hasAriaLabel) score += 0.2;
     if (features.hasRole) score += 0.15;
-    
+
     // Penalize dynamic patterns
     if (features.hasNumericId) score -= 0.3;
     if (features.hasCssModuleClass) score -= 0.2;
     if (features.hasTimestamp) score -= 0.15;
     if (features.hasUuid) score -= 0.25;
-    
+
     // Boost for interactive elements
     if (features.isClickable) score += 0.1;
-    
+
     // Penalize generic elements
     if (features.elementType === 'div' || features.elementType === 'span') {
       if (!features.hasId && !features.hasTestId && !features.hasClass) {
         score -= 0.2;
       }
     }
-    
+
     return Math.max(0, Math.min(1, score));
   }
 

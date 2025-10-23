@@ -64,7 +64,7 @@ The mock test runs for **2 seconds** and automatically:
 - ✅ Starts Allure recording
 - ✅ Records 4 sample steps:
   1. Navigate to page
-  2. Fill input field  
+  2. Fill input field
   3. Click submit button
   4. Verify success message
 - ✅ Ends with status "passed"
@@ -81,7 +81,7 @@ The mock test runs for **2 seconds** and automatically:
 1. Click **"📊 Generate Report"** button
 2. Wait 2-5 seconds for generation
 3. Backend will:
-   - Run `npx allure generate`  
+   - Run `npx allure generate`
    - Create HTML report in `allure-reports/{testRunId}/`
    - **Save report URL to database** ← **THIS WAS THE FIX!**
    - Return report URL to frontend
@@ -164,7 +164,7 @@ In the dashboard "Test Runs" tab:
 
 ### Problem: No test runs appear
 
-**Solution**: 
+**Solution**:
 1. Create a test by executing from extension
 2. Or use the reportTestResult endpoint to create one manually
 
@@ -248,10 +248,10 @@ http://localhost:3000/allure-reports/YOUR_TEST_RUN_ID/index.html
 
 ## Summary
 
-✅ **Fixed**: Report URL now saves to database  
-✅ **Frontend**: Shows "View Report" button after generation  
-✅ **Backend**: Properly updates TestRun.allureReportUrl field  
-✅ **Integration**: Complete end-to-end flow working  
+✅ **Fixed**: Report URL now saves to database
+✅ **Frontend**: Shows "View Report" button after generation
+✅ **Backend**: Properly updates TestRun.allureReportUrl field
+✅ **Integration**: Complete end-to-end flow working
 
 **Status**: Ready to test! Execute a test → Generate report → See reports in UI! 🎉
 

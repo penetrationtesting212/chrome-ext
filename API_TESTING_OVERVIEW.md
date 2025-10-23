@@ -261,7 +261,7 @@ import { test, expect } from '@playwright/test';
 
 test('Get user profile', async ({ request }) => {
   const response = await request.get('https://api.example.com/users/123');
-  
+
   expect(response.status()).toBe(200);
   const body = await response.json();
   expect(body.name).toBe('John Doe');
@@ -369,7 +369,7 @@ Results:
   Avg: 245ms ✅
   P95: 285ms ✅
   P99: 295ms ✅
-  
+
 Conclusion: API meets performance SLA
 ```
 
@@ -455,17 +455,17 @@ Result: Zero downtime for frontend team
 ## 🔐 Security & Privacy
 
 ### What We Capture
-✅ Request URLs  
-✅ HTTP methods  
-✅ Response status codes  
-✅ Headers (configurable)  
-✅ Response times  
+✅ Request URLs
+✅ HTTP methods
+✅ Response status codes
+✅ Headers (configurable)
+✅ Response times
 
 ### What We DON'T Store
-❌ Sensitive authentication tokens (can be filtered)  
-❌ Passwords  
-❌ Personal data (unless explicitly in request)  
-❌ Credit card information  
+❌ Sensitive authentication tokens (can be filtered)
+❌ Passwords
+❌ Personal data (unless explicitly in request)
+❌ Credit card information
 
 ### Data Storage
 - 📍 **Location**: Chrome Local Storage (your browser only)
@@ -585,12 +585,12 @@ Want to contribute?
 
 The API Testing Suite transforms your browser into a **complete API testing powerhouse**:
 
-✅ **Record** - Capture API traffic automatically  
-✅ **Test** - Create and run tests with one click  
-✅ **Validate** - 6 assertion types, 6 operators  
-✅ **Mock** - Stub APIs for offline testing  
-✅ **Benchmark** - Track performance with stats  
-✅ **Generate** - Export to TypeScript, Python, Java  
+✅ **Record** - Capture API traffic automatically
+✅ **Test** - Create and run tests with one click
+✅ **Validate** - 6 assertion types, 6 operators
+✅ **Mock** - Stub APIs for offline testing
+✅ **Benchmark** - Track performance with stats
+✅ **Generate** - Export to TypeScript, Python, Java
 
 **All in ONE integrated extension!**
 
@@ -607,7 +607,7 @@ The API Testing Suite transforms your browser into a **complete API testing powe
 
 ---
 
-**Built with ❤️ for developers, QA engineers, and DevOps teams**  
-**Version**: 1.0.0  
-**Status**: Production Ready ✅  
+**Built with ❤️ for developers, QA engineers, and DevOps teams**
+**Version**: 1.0.0
+**Status**: Production Ready ✅
 **License**: Apache 2.0

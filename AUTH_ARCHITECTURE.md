@@ -12,49 +12,49 @@ graph TB
         WebUser[Web User]
         ExtUser[Extension User]
     end
-    
+
     subgraph Frontend["🖥️ Frontend App (React)"]
         LoginPage[Login Page]
         Dashboard[Dashboard]
         FrontendStorage[localStorage]
     end
-    
+
     subgraph Extension["🧩 Chrome Extension"]
         ExtensionUI[Extension UI]
         TestExecutor[Test Executor]
         ExtensionStorage[chrome.storage]
     end
-    
+
     subgraph Backend["⚙️ Backend (Node.js/Express)"]
         AuthAPI[Auth API]
         JWT[JWT Service]
         Routes[Protected Routes]
     end
-    
+
     subgraph Database["💾 Database (PostgreSQL)"]
         UserTable[User Table]
         TokenTable[RefreshToken Table]
     end
-    
+
     WebUser --> LoginPage
     ExtUser --> ExtensionUI
-    
+
     LoginPage -->|POST /auth/login| AuthAPI
     ExtensionUI -->|POST /auth/login| AuthAPI
-    
+
     AuthAPI --> JWT
     JWT --> UserTable
     JWT --> TokenTable
-    
+
     AuthAPI -->|Access Token| FrontendStorage
     AuthAPI -->|Access Token| ExtensionStorage
-    
+
     FrontendStorage --> Dashboard
     ExtensionStorage --> TestExecutor
-    
+
     Dashboard -->|Bearer Token| Routes
     TestExecutor -->|Bearer Token| Routes
-    
+
     Routes --> UserTable
 ```
 
@@ -77,7 +77,7 @@ sequenceDiagram
     A->>D: Find user by email
     D-->>A: User record
     A->>A: Verify password (bcrypt)
-    
+
     alt Valid credentials
         A->>A: Generate JWT tokens
         A->>D: Store refresh token
@@ -99,27 +99,27 @@ sequenceDiagram
 ```mermaid
 stateDiagram-v2
     [*] --> Login: User provides credentials
-    
+
     Login --> TokenGeneration: Valid credentials
     TokenGeneration --> AccessToken: Generate (15 min)
     TokenGeneration --> RefreshToken: Generate (7 days)
-    
+
     AccessToken --> ActiveSession: Store in Frontend/Extension
     RefreshToken --> Database: Store in DB
-    
+
     ActiveSession --> APIRequest: Use for API calls
-    
+
     APIRequest --> TokenValid: Check expiry
     TokenValid --> Success: Token valid
     TokenValid --> TokenExpired: Token expired
-    
+
     TokenExpired --> RefreshFlow: Call /auth/refresh
     RefreshFlow --> NewTokens: Issue new tokens
     NewTokens --> ActiveSession
-    
+
     RefreshFlow --> RefreshExpired: Refresh token invalid
     RefreshExpired --> Logout: Force logout
-    
+
     Success --> [*]
     Logout --> [*]
 ```
@@ -137,40 +137,40 @@ graph LR
         F2[View Scripts]
         F3[View Test Runs]
     end
-    
+
     subgraph Extension["Extension"]
         E1[Login]
         E2[Record Test]
         E3[Run Test]
     end
-    
+
     subgraph Backend["Shared Backend"]
         B1[Auth Service]
         B2[Script Service]
         B3[Test Run Service]
     end
-    
+
     subgraph Database["Shared Database"]
         D1[(User Table)]
         D2[(Script Table)]
         D3[(TestRun Table)]
     end
-    
+
     F1 --> B1
     E1 --> B1
     B1 --> D1
-    
+
     F2 --> B2
     E2 --> B2
     B2 --> D2
-    
+
     F3 --> B3
     E3 --> B3
     B3 --> D3
-    
+
     D2 -.->|Same Data| F2
     D2 -.->|Same Data| E2
-    
+
     D3 -.->|Same Data| F3
     D3 -.->|Same Data| E3
 ```
@@ -258,44 +258,44 @@ graph TB
         HTTPS[HTTPS/TLS]
         CORS[CORS Policy]
     end
-    
+
     subgraph Auth["2. Authentication"]
         JWT[JWT Tokens]
         Bcrypt[Password Hashing]
     end
-    
+
     subgraph Authorization["3. Authorization"]
         Middleware[Auth Middleware]
         Guards[Route Guards]
     end
-    
+
     subgraph Storage["4. Storage Security"]
         LocalStorage[localStorage]
         ChromeStorage[chrome.storage]
         DBEncryption[DB Encryption]
     end
-    
+
     subgraph RateLimit["5. Rate Limiting"]
         RequestLimit[Request Throttling]
         IPBlock[IP Blocking]
     end
-    
+
     HTTPS --> JWT
     CORS --> JWT
-    
+
     JWT --> Middleware
     Bcrypt --> Middleware
-    
+
     Middleware --> Guards
-    
+
     Guards --> LocalStorage
     Guards --> ChromeStorage
     Guards --> DBEncryption
-    
+
     DBEncryption --> RequestLimit
     LocalStorage --> RequestLimit
     ChromeStorage --> RequestLimit
-    
+
     RequestLimit --> IPBlock
 ```
 
@@ -355,26 +355,26 @@ graph TB
 ```mermaid
 stateDiagram-v2
     [*] --> Unauthenticated: App Load
-    
+
     Unauthenticated --> Authenticating: Login attempt
-    
+
     Authenticating --> Authenticated: Success
     Authenticating --> Unauthenticated: Failure
-    
+
     Authenticated --> Active: Token valid
     Active --> Authenticated: API call success
-    
+
     Active --> TokenExpiring: Token near expiry
     TokenExpiring --> Refreshing: Auto-refresh
-    
+
     Refreshing --> Authenticated: Refresh success
     Refreshing --> Unauthenticated: Refresh failed
-    
+
     Authenticated --> LoggingOut: User logout
     Active --> LoggingOut: User logout
-    
+
     LoggingOut --> Unauthenticated: Clear tokens
-    
+
     Unauthenticated --> [*]
 ```
 
@@ -450,17 +450,17 @@ stateDiagram-v2
 
 **Key Architectural Points:**
 
-✅ **Single Backend** - One API serves both frontend and extension  
-✅ **Shared Database** - All users stored in one PostgreSQL database  
-✅ **JWT Tokens** - Industry-standard authentication  
-✅ **Bcrypt Hashing** - Secure password storage  
-✅ **Token Refresh** - Automatic session renewal  
-✅ **CORS Enabled** - Cross-origin resource sharing  
-✅ **Isolated Storage** - Frontend/Extension store tokens separately  
-✅ **Unified Experience** - Same credentials work everywhere  
+✅ **Single Backend** - One API serves both frontend and extension
+✅ **Shared Database** - All users stored in one PostgreSQL database
+✅ **JWT Tokens** - Industry-standard authentication
+✅ **Bcrypt Hashing** - Secure password storage
+✅ **Token Refresh** - Automatic session renewal
+✅ **CORS Enabled** - Cross-origin resource sharing
+✅ **Isolated Storage** - Frontend/Extension store tokens separately
+✅ **Unified Experience** - Same credentials work everywhere
 
 ---
 
-**Architecture Version**: 1.0.0  
-**Last Updated**: 2025-10-23  
+**Architecture Version**: 1.0.0
+**Last Updated**: 2025-10-23
 **Status**: Production Ready ✅

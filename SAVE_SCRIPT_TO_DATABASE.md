@@ -215,8 +215,8 @@ After building, reload the extension:
 
 ## 📦 Build Status
 
-✅ **Built in 22.14s**  
-✅ **File size:** `dist/index.js` = **430.49 KB**  
+✅ **Built in 22.14s**
+✅ **File size:** `dist/index.js` = **430.49 KB**
 ✅ **No compilation errors**
 
 ---

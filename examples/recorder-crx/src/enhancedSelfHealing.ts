@@ -37,7 +37,7 @@ export interface ElementFingerprint {
 
 export class EnhancedSelfHealingService {
   private suggestions: Map<string, HealingSuggestion[]> = new Map();
-  
+
   // Enhanced locator strategies with priority and stability scores
   private locatorStrategies = [
     { type: 'testid', priority: 1, stability: 0.95 },
@@ -397,7 +397,7 @@ export class EnhancedSelfHealingService {
     successRate: number;
   }> {
     const allSuggestions: HealingSuggestion[] = [];
-    
+
     for (const suggestions of this.suggestions.values()) {
       allSuggestions.push(...suggestions);
     }
@@ -411,10 +411,10 @@ export class EnhancedSelfHealingService {
       ? allSuggestions.reduce((sum, s) => sum + s.confidence, 0) / total
       : 0;
 
-    const totalAttempts = allSuggestions.reduce((sum, s) => 
+    const totalAttempts = allSuggestions.reduce((sum, s) =>
       sum + (s.successCount || 0) + (s.failureCount || 0), 0
     );
-    const totalSuccesses = allSuggestions.reduce((sum, s) => 
+    const totalSuccesses = allSuggestions.reduce((sum, s) =>
       sum + (s.successCount || 0), 0
     );
     const successRate = totalAttempts > 0 ? totalSuccesses / totalAttempts : 0;

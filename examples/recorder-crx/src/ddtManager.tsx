@@ -59,7 +59,7 @@ export const DDTManager: React.FC<DDTManagerProps> = ({ onFileSelected }) => {
     try {
       setLoading(true);
       const content = await file.text();
-      
+
       let testDataFile: TestDataFile;
       if (file.name.endsWith('.csv')) {
         testDataFile = await ddtService.uploadCSV(file.name, content);
@@ -68,10 +68,10 @@ export const DDTManager: React.FC<DDTManagerProps> = ({ onFileSelected }) => {
       } else {
         throw new Error('Unsupported file type. Please upload CSV or JSON files.');
       }
-      
+
       // Add to files list
       setFiles(prev => [...prev, testDataFile]);
-      
+
       // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -88,7 +88,7 @@ export const DDTManager: React.FC<DDTManagerProps> = ({ onFileSelected }) => {
     if (!confirm('Are you sure you want to delete this file?')) {
       return;
     }
-    
+
     try {
       setLoading(true);
       const success = await ddtService.deleteDataFile(fileId);
@@ -125,21 +125,21 @@ export const DDTManager: React.FC<DDTManagerProps> = ({ onFileSelected }) => {
           disabled={loading}
           style={{ display: 'none' }}
         />
-        <button 
+        <button
           onClick={() => fileInputRef.current?.click()}
           disabled={loading}
         >
           {loading ? 'Uploading...' : 'Upload File'}
         </button>
       </div>
-      
+
       {files.length === 0 ? (
         <p>No data files uploaded yet.</p>
       ) : (
         <div className="ddt-files">
           {files.map(file => (
-            <div 
-              key={file.id} 
+            <div
+              key={file.id}
               className={`ddt-file ${selectedFile === file.id ? 'selected' : ''}`}
               onClick={() => handleFileSelect(file.id)}
             >
@@ -151,7 +151,7 @@ export const DDTManager: React.FC<DDTManagerProps> = ({ onFileSelected }) => {
                   <span className="column-count">{file.columnNames.length} columns</span>
                 </div>
               </div>
-              <button 
+              <button
                 className="delete-btn"
                 onClick={(e) => {
                   e.stopPropagation();

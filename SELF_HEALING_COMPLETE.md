@@ -120,7 +120,7 @@ In the self-healing UI:
 
 #### 3. **Prioritize by Confidence**
 - **>80%**: High confidence - safe to approve
-- **50-80%**: Medium - review carefully  
+- **50-80%**: Medium - review carefully
 - **<50%**: Low - consider alternatives
 
 ### For Developers
@@ -183,8 +183,8 @@ Confidence: 95%
 
 **Element**:
 ```html
-<button 
-  class="primary-btn" 
+<button
+  class="primary-btn"
   aria-label="Submit Form"
   id="submit"
 >
@@ -457,7 +457,7 @@ In the self-healing UI:
 
 #### 3. **Prioritize by Confidence**
 - **>80%**: High confidence - safe to approve
-- **50-80%**: Medium - review carefully  
+- **50-80%**: Medium - review carefully
 - **<50%**: Low - consider alternatives
 
 ### For Developers
@@ -520,8 +520,8 @@ Confidence: 95%
 
 **Element**:
 ```html
-<button 
-  class="primary-btn" 
+<button
+  class="primary-btn"
   aria-label="Submit Form"
   id="submit"
 >

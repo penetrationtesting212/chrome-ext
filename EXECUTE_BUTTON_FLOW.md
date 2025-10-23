@@ -72,12 +72,12 @@ The Execute button has **TWO execution modes**:
 const handleExecute = async () => {
   // scriptId comes from props (current language ID)
   const testRun = await testExecutor.executeTest(scriptId);
-  
+
   // Set up progress tracking
   testExecutor.addProgressCallback(testRun.id, progress => {
     setProgress(progress);
   });
-  
+
   // Set up log tracking
   testExecutor.addLogCallback(testRun.id, log => {
     setLogs(prev => [...prev, log]);
@@ -96,13 +96,13 @@ const handleExecute = async () => {
 **File:** `testExecutorUI.tsx`
 
 ```typescript
-// When user clicks "Run Selected" 
+// When user clicks "Run Selected"
 const handleExecuteSavedScript = async () => {
   if (!selectedScript) return;
-  
+
   // scriptId comes from selected script (database)
   const testRun = await testExecutor.executeTest(selectedScript.id);
-  
+
   // Same progress/log tracking as above
 }
 ```
@@ -226,12 +226,12 @@ apiService.sendMessage('executeTest', {
 socket.on('message', async (message) => {
   if (message.type === 'executeTest') {
     const { testRunId, scriptId } = message.data;
-    
+
     // Retrieve script from database
     const script = await prisma.script.findUnique({
       where: { id: scriptId }
     });
-    
+
     // Create test run record
     const testRun = await prisma.testRun.create({
       data: {
@@ -242,11 +242,11 @@ socket.on('message', async (message) => {
         browser: 'chromium'
       }
     });
-    
+
     // Execute the script (actual Playwright execution)
     // This would run script.code in a Playwright process
     executePlaywrightScript(script.code);
-    
+
     // Send progress updates back to extension
     socket.send({
       type: 'testRunProgress',

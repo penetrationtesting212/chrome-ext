@@ -107,10 +107,10 @@ Password: demo123
 ```
 
 **Expected:**
-✅ Login successful  
-✅ Dashboard loads  
-✅ Scripts tab shows (0-n scripts)  
-✅ Test Runs tab shows recent runs  
+✅ Login successful
+✅ Dashboard loads
+✅ Scripts tab shows (0-n scripts)
+✅ Test Runs tab shows recent runs
 
 ---
 
@@ -129,10 +129,10 @@ Password: demo123
 ```
 
 **Expected:**
-✅ Login successful  
-✅ "Authenticated as demo@example.com"  
-✅ "Load Scripts" button appears  
-✅ Scripts can be loaded from backend  
+✅ Login successful
+✅ "Authenticated as demo@example.com"
+✅ "Load Scripts" button appears
+✅ Scripts can be loaded from backend
 
 ---
 
@@ -350,6 +350,6 @@ npm run seed
 
 ---
 
-**Setup Time:** ~5 minutes  
-**Difficulty:** Easy  
+**Setup Time:** ~5 minutes
+**Difficulty:** Easy
 **Support:** See [UNIFIED_AUTHENTICATION.md](./UNIFIED_AUTHENTICATION.md)

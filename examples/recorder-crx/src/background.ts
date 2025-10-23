@@ -201,14 +201,14 @@ chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
     getStorageState().then(sendResponse).catch(() => {});
     return true;
   }
-  
+
   // Handle API recording messages
   if (message.type === 'startApiRecording') {
     startApiRecording();
     sendResponse({ success: true });
     return true;
   }
-  
+
   if (message.type === 'stopApiRecording') {
     stopApiRecording();
     sendResponse({ success: true });
@@ -232,14 +232,14 @@ selfHealingService.loadStrategies().catch(() => {});
 function startApiRecording() {
   if (isApiRecording) return;
   isApiRecording = true;
-  
+
   // Setup webRequest listeners to capture network traffic
   chrome.webRequest.onBeforeSendHeaders.addListener(
     captureRequest,
     { urls: ['<all_urls>'] },
     ['requestHeaders', 'extraHeaders']
   );
-  
+
   chrome.webRequest.onCompleted.addListener(
     captureResponse,
     { urls: ['<all_urls>'] },
@@ -253,7 +253,7 @@ function startApiRecording() {
 function stopApiRecording() {
   if (!isApiRecording) return;
   isApiRecording = false;
-  
+
   chrome.webRequest.onBeforeSendHeaders.removeListener(captureRequest);
   chrome.webRequest.onCompleted.removeListener(captureResponse);
 }
@@ -263,11 +263,11 @@ function stopApiRecording() {
  */
 function captureRequest(details: chrome.webRequest.WebRequestHeadersDetails) {
   if (!isApiRecording) return;
-  
+
   // Filter out non-API requests (images, fonts, etc.)
   const url = new URL(details.url);
   if (shouldIgnoreRequest(url)) return;
-  
+
   const headers: Record<string, string> = {};
   if (details.requestHeaders) {
     details.requestHeaders.forEach((header: chrome.webRequest.HttpHeader) => {
@@ -276,7 +276,7 @@ function captureRequest(details: chrome.webRequest.WebRequestHeadersDetails) {
       }
     });
   }
-  
+
   const request: ApiRequest = {
     id: `req-${details.requestId}`,
     method: details.method as any,
@@ -284,7 +284,7 @@ function captureRequest(details: chrome.webRequest.WebRequestHeadersDetails) {
     headers,
     timestamp: details.timeStamp
   };
-  
+
   apiTestingService.captureRequest(request);
 }
 
@@ -293,10 +293,10 @@ function captureRequest(details: chrome.webRequest.WebRequestHeadersDetails) {
  */
 function captureResponse(details: chrome.webRequest.WebResponseHeadersDetails) {
   if (!isApiRecording) return;
-  
+
   const url = new URL(details.url);
   if (shouldIgnoreRequest(url)) return;
-  
+
   const headers: Record<string, string> = {};
   if (details.responseHeaders) {
     details.responseHeaders.forEach((header: chrome.webRequest.HttpHeader) => {
@@ -305,7 +305,7 @@ function captureResponse(details: chrome.webRequest.WebResponseHeadersDetails) {
       }
     });
   }
-  
+
   const response: ApiResponse = {
     id: `resp-${details.requestId}`,
     requestId: `req-${details.requestId}`,
@@ -315,10 +315,10 @@ function captureResponse(details: chrome.webRequest.WebResponseHeadersDetails) {
     responseTime: 0, // Will be calculated from timing if available
     timestamp: details.timeStamp
   };
-  
+
   // Note: Response body is not available in webRequest API
   // We would need to use chrome.debugger or fetch API for body content
-  
+
   apiTestingService.captureResponse(response);
 }
 
@@ -328,14 +328,14 @@ function captureResponse(details: chrome.webRequest.WebResponseHeadersDetails) {
 function shouldIgnoreRequest(url: URL): boolean {
   // Ignore extension URLs
   if (url.protocol === 'chrome-extension:') return true;
-  
+
   // Ignore common static resources
   const staticExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot'];
   if (staticExtensions.some(ext => url.pathname.endsWith(ext))) return true;
-  
+
   // Ignore internal chrome URLs
   if (url.hostname.includes('chrome.google.com')) return true;
-  
+
   return false;
 }
 
@@ -355,7 +355,7 @@ function getStatusText(statusCode: number): string {
     502: 'Bad Gateway',
     503: 'Service Unavailable'
   };
-  
+
   return statusTexts[statusCode] || 'Unknown';
 }
 

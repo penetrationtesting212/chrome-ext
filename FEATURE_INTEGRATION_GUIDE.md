@@ -60,7 +60,7 @@ When you open the recorder extension with **experimental features enabled**, you
    - Click **Approve** to use the new locator
    - Click **Reject** to dismiss
 
-**When to use:** 
+**When to use:**
 - When your recorded tests fail due to changed element selectors
 - To maintain test stability across UI updates
 
@@ -252,9 +252,9 @@ await expect(page.locator('.message')).toHaveText('${expected}');
 ## 🎯 Summary
 
 You now have a **professional-grade testing extension** with:
-✅ Self-healing locators for test stability  
-✅ Data-driven testing for parameterization  
-✅ Advanced debugging for troubleshooting  
-✅ Integrated test execution with real-time feedback  
+✅ Self-healing locators for test stability
+✅ Data-driven testing for parameterization
+✅ Advanced debugging for troubleshooting
+✅ Integrated test execution with real-time feedback
 
 All features are **fully functional** and ready to use! 🎉

@@ -56,10 +56,10 @@ export class SelfHealingService {
     { type: 'css', priority: 8, stability: 0.50 },
     { type: 'xpath', priority: 9, stability: 0.40 }
   ];
-  
+
   // AI integration flag
   private aiEnabled: boolean = true;
-  
+
   /**
    * Enable/disable AI enhancement
    */
@@ -73,7 +73,7 @@ export class SelfHealingService {
   isAIEnabled(): boolean {
     return this.aiEnabled;
   }
-   
+
   /**
    * Calculate comprehensive confidence score with AI enhancement
    */
@@ -104,12 +104,12 @@ export class SelfHealingService {
         const mockElement = document.createElement(element.tag);
         if (element.id) mockElement.id = element.id;
         if (element.className) mockElement.className = element.className;
-        
+
         // Set attributes
         Object.entries(element.attributes).forEach(([key, value]) => {
           mockElement.setAttribute(key, value);
         });
-        
+
         const aiPrediction = await aiSelfHealingService.predictLocatorSuccess(mockElement, locator);
         // Blend AI prediction with traditional scoring
         confidence = (confidence * 0.7) + (aiPrediction.confidence * 0.3);
@@ -121,7 +121,7 @@ export class SelfHealingService {
 
     return confidence;
   }
-   
+
   /**
    * Record a locator failure and suggest alternatives
    */
@@ -130,19 +130,19 @@ export class SelfHealingService {
       // In a browser extension, we'll store suggestions in chrome.storage
       const scriptId = 'current-script'; // This would be dynamic in a real implementation
       const suggestions = this.suggestions.get(scriptId) || [];
-      
+
       if (validLocator) {
         // Check if this combination already exists
-        const existing = suggestions.find(s => 
-          s.brokenLocator === brokenLocator.locator && 
+        const existing = suggestions.find(s =>
+          s.brokenLocator === brokenLocator.locator &&
           s.validLocator === validLocator.locator
         );
-        
+
         if (existing) {
           // Update usage count (simplified for browser extension)
           return existing;
         }
-        
+
         // Create new self-healing suggestion
         const suggestion: HealingSuggestion = {
           id: Math.random().toString(36).substr(2, 9),
@@ -154,25 +154,25 @@ export class SelfHealingService {
           createdAt: new Date(),
           aiEnhanced: validLocator.aiEnhanced || false
         };
-        
+
         suggestions.push(suggestion);
         this.suggestions.set(scriptId, suggestions);
-        
+
         // Store in chrome.storage for persistence
-        await chrome.storage.local.set({ 
-          [`healing_suggestions_${scriptId}`]: suggestions 
+        await chrome.storage.local.set({
+          [`healing_suggestions_${scriptId}`]: suggestions
         });
-        
+
         return suggestion;
       }
-      
+
       return null;
     } catch (error) {
       console.error('Error recording locator failure:', error);
       return null;
     }
   }
-   
+
   /**
    * Get self-healing suggestions for a script
    */
@@ -186,7 +186,7 @@ export class SelfHealingService {
       return [];
     }
   }
-   
+
   /**
    * Approve a self-healing suggestion
    */
@@ -195,15 +195,15 @@ export class SelfHealingService {
       const scriptId = 'current-script'; // This would be dynamic in a real implementation
       const suggestions = await this.getSuggestions();
       const suggestion = suggestions.find(s => s.id === id);
-      
+
       if (suggestion) {
         suggestion.status = 'approved';
         suggestion.confidence = Math.min(1.0, suggestion.confidence + 0.1);
-        
-        await chrome.storage.local.set({ 
-          [`healing_suggestions_${scriptId}`]: suggestions 
+
+        await chrome.storage.local.set({
+          [`healing_suggestions_${scriptId}`]: suggestions
         });
-        
+
         // Record success in AI service if AI-enhanced
         if (suggestion.aiEnhanced) {
           try {
@@ -212,17 +212,17 @@ export class SelfHealingService {
             console.warn('Failed to record AI healing result:', error);
           }
         }
-        
+
         return true;
       }
-      
+
       return false;
     } catch (error) {
       console.error('Error approving suggestion:', error);
       return false;
     }
   }
-   
+
   /**
    * Reject a self-healing suggestion
    */
@@ -231,14 +231,14 @@ export class SelfHealingService {
       const scriptId = 'current-script'; // This would be dynamic in a real implementation
       const suggestions = await this.getSuggestions();
       const suggestion = suggestions.find(s => s.id === id);
-      
+
       if (suggestion) {
         suggestion.status = 'rejected';
-        
-        await chrome.storage.local.set({ 
-          [`healing_suggestions_${scriptId}`]: suggestions 
+
+        await chrome.storage.local.set({
+          [`healing_suggestions_${scriptId}`]: suggestions
         });
-        
+
         // Record failure in AI service if AI-enhanced
         if (suggestion.aiEnhanced) {
           try {
@@ -247,17 +247,17 @@ export class SelfHealingService {
             console.warn('Failed to record AI healing result:', error);
           }
         }
-        
+
         return true;
       }
-      
+
       return false;
     } catch (error) {
       console.error('Error rejecting suggestion:', error);
       return false;
     }
   }
-   
+
   /**
    * Try to find element using alternative locators with AI enhancement
    */
@@ -265,73 +265,73 @@ export class SelfHealingService {
     element: { tag: string; id?: string; className?: string; attributes: Record<string, string> }
   ): Promise<LocatorInfo | null> {
     const locators: LocatorInfo[] = [];
-    
+
     // Generate all possible locators
     for (const { type } of this.locatorStrategies) {
       let locator: LocatorInfo | null = null;
-      
+
       switch (type) {
         case 'id':
           if (element.id && !element.id.match(/\d{6,}/)) {
             locator = { locator: `#${element.id}`, type: 'id' };
           }
           break;
-        
+
         case 'testid':
           const testId = element.attributes['data-testid'] || element.attributes['data-test'];
           if (testId) {
             locator = { locator: `[data-testid="${testId}"]`, type: 'testid' };
           }
           break;
-        
+
         case 'aria':
           const ariaLabel = element.attributes['aria-label'];
           if (ariaLabel) {
             locator = { locator: `[aria-label="${ariaLabel}"]`, type: 'aria' };
           }
           break;
-        
+
         case 'role':
           const role = element.attributes.role;
           if (role) {
             locator = { locator: `[role="${role}"]`, type: 'role' };
           }
           break;
-        
+
         case 'name':
           if (element.attributes.name) {
             locator = { locator: `[name="${element.attributes.name}"]`, type: 'name' };
           }
           break;
-        
+
         case 'placeholder':
           const placeholder = element.attributes.placeholder;
           if (placeholder) {
             locator = { locator: `[placeholder="${placeholder}"]`, type: 'placeholder' };
           }
           break;
-        
+
         case 'text':
           // Would need element text content, skip for now
           break;
-        
+
         case 'css':
           if (element.className && !element.className.match(/\d{6,}/)) {
             locator = { locator: `.${element.className.split(' ')[0]}`, type: 'css' };
           }
           break;
-        
+
         case 'xpath':
           locator = { locator: `//${element.tag}`, type: 'xpath' };
           break;
       }
-      
+
       if (locator) {
         locator.confidence = await this.calculateConfidence(type, locator.locator, element);
         locators.push(locator);
       }
     }
-    
+
     // AI enhancement if enabled
     if (this.aiEnabled && locators.length > 0) {
       try {
@@ -339,12 +339,12 @@ export class SelfHealingService {
         const mockElement = document.createElement(element.tag);
         if (element.id) mockElement.id = element.id;
         if (element.className) mockElement.className = element.className;
-        
+
         // Set attributes
         Object.entries(element.attributes).forEach(([key, value]) => {
           mockElement.setAttribute(key, value);
         });
-        
+
         // Get AI predictions for each locator
         const aiEnhancedLocators = await Promise.all(
           locators.map(async (locator) => {
@@ -356,7 +356,7 @@ export class SelfHealingService {
             };
           })
         );
-        
+
         // Sort by AI-enhanced confidence and return the best
         aiEnhancedLocators.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
         return aiEnhancedLocators[0];
@@ -364,12 +364,12 @@ export class SelfHealingService {
         console.warn('AI enhancement failed, using traditional scoring:', error);
       }
     }
-    
+
     // Sort by traditional confidence and return the best
     locators.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
     return locators.length > 0 ? locators[0] : null;
   }
-   
+
   /**
    * Update locator strategy priority
    */
@@ -377,7 +377,7 @@ export class SelfHealingService {
     this.locatorStrategies = strategies.sort((a, b) => a.priority - b.priority);
     await chrome.storage.local.set({ locator_strategies: strategies });
   }
-   
+
   /**
    * Load saved strategies from storage
    */
@@ -421,9 +421,9 @@ export class SelfHealingService {
         // Get AI prediction instead of direct feature extraction
         const aiPrediction = await aiSelfHealingService.predictLocatorSuccess(element, locator);
         const features = aiPrediction.features;
-        
+
         // Check if AI detects instability
-        if (features.hasNumericId || features.hasCssModuleClass || 
+        if (features.hasNumericId || features.hasCssModuleClass ||
             features.hasTimestamp || features.hasUuid || features.hasRandomId) {
           return {
             isUnstable: true,
@@ -481,7 +481,7 @@ export class SelfHealingService {
     visualSimilarityAvg: number;
   }> {
     const allSuggestions: HealingSuggestion[] = [];
-    
+
     for (const suggestions of this.suggestions.values()) {
       allSuggestions.push(...suggestions);
     }
@@ -499,7 +499,7 @@ export class SelfHealingService {
     const aiEnhanced = allSuggestions.filter(s => s.aiEnhanced);
     const aiEnhancedCount = aiEnhanced.length;
     const aiSuccesses = aiEnhanced.reduce((sum, s) => sum + (s.successCount || 0), 0);
-    const aiAttempts = aiEnhanced.reduce((sum, s) => 
+    const aiAttempts = aiEnhanced.reduce((sum, s) =>
       sum + (s.successCount || 0) + (s.failureCount || 0), 0
     );
     const aiSuccessRate = aiAttempts > 0 ? aiSuccesses / aiAttempts : 0;
@@ -539,7 +539,7 @@ export class SelfHealingService {
     if (this.aiEnabled) {
       try {
         const aiResult = await aiSelfHealingService.autoHealLocator(failedLocator, element, context);
-        
+
         // Record the healing in traditional service as well
         const suggestion: HealingSuggestion = {
           id: Math.random().toString(36).substr(2, 9),
@@ -551,14 +551,14 @@ export class SelfHealingService {
           createdAt: new Date(),
           aiEnhanced: true
         };
-        
+
         // Store suggestion
         const scriptId = context.url; // Use URL as script identifier
         if (!this.suggestions.has(scriptId)) {
           this.suggestions.set(scriptId, []);
         }
         this.suggestions.get(scriptId)!.push(suggestion);
-        
+
         return {
           ...aiResult,
           aiEnhanced: true
@@ -567,7 +567,7 @@ export class SelfHealingService {
         console.warn('AI auto-healing failed, falling back to traditional:', error);
       }
     }
-    
+
     // Fallback to traditional healing
     const elementInfo = {
       tag: element.tagName.toLowerCase(),
@@ -575,13 +575,13 @@ export class SelfHealingService {
       className: element.className,
       attributes: {} as Record<string, string>
     };
-    
+
     // Extract attributes
     for (let i = 0; i < element.attributes.length; i++) {
       const attr = element.attributes[i];
       elementInfo.attributes[attr.name] = attr.value;
     }
-    
+
     const alternative = await this.findAlternativeLocator(elementInfo);
     if (alternative) {
       return {
@@ -592,7 +592,7 @@ export class SelfHealingService {
         aiEnhanced: false
       };
     }
-    
+
     throw new Error('No suitable alternative locator found');
   }
 
@@ -617,7 +617,7 @@ export class SelfHealingService {
         break;
       }
     }
-    
+
     // Also record in AI service if AI-enhanced
     try {
       await aiSelfHealingService.recordHealingResult(healingId, success, error);
@@ -637,7 +637,7 @@ export class SelfHealingService {
         console.warn('AI visual similarity failed:', error);
       }
     }
-    
+
     // Fallback to simple text comparison
     const text1 = element1.textContent?.trim() || '';
     const text2 = element2.textContent?.trim() || '';

@@ -71,7 +71,7 @@ export class RealDataIntegration {
   private handleTestStart(event: Event): void {
     const customEvent = event as CustomEvent;
     if (!this.isListening) return;
-    
+
     const { testExecution } = customEvent.detail;
     this.activeExecutions.set(testExecution.id, testExecution);
   }
@@ -82,15 +82,15 @@ export class RealDataIntegration {
   private handleTestComplete(event: Event): void {
     const customEvent = event as CustomEvent;
     if (!this.isListening) return;
-    
+
     const { testExecution } = customEvent.detail;
     const execution = this.activeExecutions.get(testExecution.id);
-    
+
     if (execution) {
       execution.status = testExecution.status;
       execution.endTime = testExecution.endTime;
       execution.logs = testExecution.logs;
-      
+
       // Process failures for self-healing
       if (execution.failures && execution.failures.length > 0) {
         this.processFailures(execution);
@@ -104,10 +104,10 @@ export class RealDataIntegration {
   private handleLocatorFailure(event: Event): void {
     const customEvent = event as CustomEvent;
     if (!this.isListening) return;
-    
+
     const { testId, step, locator, error, element } = customEvent.detail;
     const execution = this.activeExecutions.get(testId);
-    
+
     if (execution) {
       const failure: TestFailure = {
         id: `failure-${Date.now()}`,
@@ -117,12 +117,12 @@ export class RealDataIntegration {
         timestamp: new Date(),
         element
       };
-      
+
       if (!execution.failures) {
         execution.failures = [];
       }
       execution.failures.push(failure);
-      
+
       // Attempt auto-healing
       this.attemptAutoHealing(execution, failure);
     }
@@ -134,16 +134,16 @@ export class RealDataIntegration {
   private handleLocatorHealed(event: Event): void {
     const customEvent = event as CustomEvent;
     if (!this.isListening) return;
-    
+
     const { testId, failureId, healedLocator, success } = customEvent.detail;
     const execution = this.activeExecutions.get(testId);
-    
+
     if (execution && execution.failures) {
       const failure = execution.failures.find(f => f.id === failureId);
       if (failure) {
         failure.healed = success;
         failure.healedLocator = healedLocator;
-        
+
         // Record the healing result
         this.recordHealingResult(failure, success);
       }
@@ -155,7 +155,7 @@ export class RealDataIntegration {
    */
   private async attemptAutoHealing(execution: RealTestExecution, failure: TestFailure): Promise<void> {
     if (!failure.element) return;
-    
+
     try {
       // Try AI healing first
       const config = aiSelfHealingService.getConfig();
@@ -168,11 +168,11 @@ export class RealDataIntegration {
             failureReason: failure.error
           }
         );
-        
+
         if (aiResult.autoApplied) {
           failure.healed = true;
           failure.healedLocator = aiResult.healedLocator;
-          
+
           // Emit healing event
           this.emitEvent('locatorHealed', {
             testId: execution.id,
@@ -180,11 +180,11 @@ export class RealDataIntegration {
             healedLocator: aiResult.healedLocator,
             success: true
           });
-          
+
           return;
         }
       }
-      
+
       // Fallback to traditional self-healing
       const traditionalResult = await selfHealingService.autoHealLocator(
         failure.locator,
@@ -194,11 +194,11 @@ export class RealDataIntegration {
           failureReason: failure.error
         }
       );
-      
+
       if (traditionalResult.healedLocator) {
         failure.healed = true;
         failure.healedLocator = traditionalResult.healedLocator;
-        
+
         // Emit healing event
         this.emitEvent('locatorHealed', {
           testId: execution.id,
@@ -209,7 +209,7 @@ export class RealDataIntegration {
       }
     } catch (error) {
       console.error('Auto-healing failed:', error);
-      
+
       // Record failure
       this.recordHealingResult(failure, false);
     }
@@ -220,7 +220,7 @@ export class RealDataIntegration {
    */
   private async processFailures(execution: RealTestExecution): Promise<void> {
     if (!execution.failures) return;
-    
+
     for (const failure of execution.failures) {
       if (!failure.healed) {
         // Try to heal any remaining failures
@@ -240,7 +240,7 @@ export class RealDataIntegration {
         success,
         success ? undefined : failure.error
       );
-      
+
       // Record in traditional service
       await selfHealingService.recordHealingResult(
         `failure-${failure.id}`,
@@ -270,18 +270,18 @@ export class RealDataIntegration {
     let aiHealings = 0;
     let traditionalHealings = 0;
     const recentFailures: TestFailure[] = [];
-    
+
     // Process all active executions
     for (const execution of this.activeExecutions.values()) {
       totalTests++;
-      
+
       if (execution.failures) {
         totalFailures += execution.failures.length;
-        
+
         for (const failure of execution.failures) {
           if (failure.healed) {
             totalHealings++;
-            
+
             // Check if it was AI or traditional healing
             if (failure.healedLocator && failure.healedLocator.includes('data-testid')) {
               aiHealings++;
@@ -297,13 +297,13 @@ export class RealDataIntegration {
         }
       }
     }
-    
+
     // Get AI service statistics
     const aiStats = await aiSelfHealingService.getHealingStatistics();
-    
+
     // Get traditional service statistics
     const traditionalStats = await selfHealingService.getStatistics();
-    
+
     return {
       totalTests,
       totalFailures,
@@ -342,7 +342,7 @@ export class RealDataIntegration {
       elementType: string;
       aiEnhanced: boolean;
     }> = [];
-    
+
     // Process all active executions
     for (const execution of this.activeExecutions.values()) {
       if (execution.failures) {
@@ -362,7 +362,7 @@ export class RealDataIntegration {
         }
       }
     }
-    
+
     // Sort by timestamp (newest first)
     return history.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }
@@ -380,15 +380,15 @@ export class RealDataIntegration {
       logs: ['Test started'],
       failures: []
     };
-    
+
     this.activeExecutions.set(testId, execution);
-    
+
     // Emit test start event
     this.emitEvent('testExecutionStarted', { testExecution: execution });
-    
+
     // Simulate test steps
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     if (withFailures) {
       // Simulate a locator failure
       const failure: TestFailure = {
@@ -398,10 +398,10 @@ export class RealDataIntegration {
         error: 'Element not found',
         timestamp: new Date()
       };
-      
+
       execution.failures?.push(failure);
       execution.logs.push(`Step 1 failed: ${failure.error}`);
-      
+
       // Emit failure event
       this.emitEvent('locatorFailed', {
         testId,
@@ -409,16 +409,16 @@ export class RealDataIntegration {
         locator: failure.locator,
         error: failure.error
       });
-      
+
       // Wait for healing attempt
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
-    
+
     // Complete test
     execution.status = 'passed';
     execution.endTime = new Date();
     execution.logs.push('Test completed');
-    
+
     // Emit test complete event
     this.emitEvent('testExecutionCompleted', { testExecution: execution });
   }
@@ -438,7 +438,7 @@ export class RealDataIntegration {
   clearOldExecutions(olderThanDays: number = 7): void {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
-    
+
     for (const [id, execution] of this.activeExecutions.entries()) {
       if (execution.startTime < cutoffDate) {
         this.activeExecutions.delete(id);

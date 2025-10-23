@@ -197,7 +197,7 @@ Example Test
       const actionTemplate = template.actions[action.name];
       if (actionTemplate) {
         let line = actionTemplate;
-        
+
         // Replace placeholders
         Object.keys(action).forEach(key => {
           if (key !== 'name') {
@@ -205,7 +205,7 @@ Example Test
             line = line.replace(regex, action[key]);
           }
         });
-        
+
         code += line + '\n';
       }
     }

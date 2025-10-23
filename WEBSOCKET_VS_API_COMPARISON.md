@@ -32,12 +32,12 @@
 async executeTest(scriptId: string) {
   // Connect to WebSocket
   apiService.connectWebSocket();
-  
+
   // Send message
   apiService.sendMessage('executeTest', {
     testRunId, scriptId
   });
-  
+
   // ❌ Wait for WebSocket response (never comes!)
 }
 ```
@@ -57,10 +57,10 @@ async executeTest(scriptId: string) {
 async executeTest(scriptId: string) {
   // Call REST API to start test
   const testRun = await apiService.startTestRun(scriptId);
-  
+
   // Poll for status every 2 seconds
   pollTestRunStatus(testRun.id);
-  
+
   // ✅ Gets results and updates UI!
 }
 ```
@@ -219,7 +219,7 @@ Average request time: ~50ms each
 Total overhead: ~4.5 seconds
 ```
 
-**Verdict:** 
+**Verdict:**
 - ⚠️ Polling has slightly higher overhead (~4.5s vs ~0.1s)
 - ✅ But it **actually works** and **already implemented**!
 - ✅ Acceptable trade-off for reliability
@@ -245,24 +245,24 @@ const maxPolls = 150;       // Max 5 minutes (150 × 2s)
 ## 🎯 **Benefits of Current Implementation**
 
 ### **1. Reliability**
-✅ Works immediately - no setup needed  
-✅ Uses existing backend endpoints  
-✅ Standard HTTP - no connection issues  
+✅ Works immediately - no setup needed
+✅ Uses existing backend endpoints
+✅ Standard HTTP - no connection issues
 
 ### **2. Debuggability**
-✅ Can test with Postman/curl  
-✅ See requests in Network tab  
-✅ Standard error messages  
+✅ Can test with Postman/curl
+✅ See requests in Network tab
+✅ Standard error messages
 
 ### **3. Maintenance**
-✅ No WebSocket server to maintain  
-✅ No connection management  
-✅ Simpler codebase  
+✅ No WebSocket server to maintain
+✅ No connection management
+✅ Simpler codebase
 
 ### **4. Compatibility**
-✅ Works in all browsers  
-✅ No WebSocket blockers  
-✅ No firewall issues  
+✅ Works in all browsers
+✅ No WebSocket blockers
+✅ No firewall issues
 
 ---
 
@@ -290,9 +290,9 @@ You might switch to WebSocket **later** if:
 
 ## 📦 **Build Status**
 
-✅ **Built successfully in 13.90 seconds**  
-✅ **File size:** `dist/index.js` = **432.29 KB** (+1.8 KB for polling logic)  
-✅ **No compilation errors**  
+✅ **Built successfully in 13.90 seconds**
+✅ **File size:** `dist/index.js` = **432.29 KB** (+1.8 KB for polling logic)
+✅ **No compilation errors**
 ✅ **Ready to use!**
 
 ---
@@ -352,7 +352,7 @@ Check browser console:
 ## 🎓 **Key Takeaway**
 
 > **Use the simplest solution that works.**
-> 
+>
 > WebSocket is powerful, but REST API + polling is simpler, already implemented, and perfectly adequate for test execution where:
 > - Tests run for minutes (not milliseconds)
 > - 2-second update intervals are fine

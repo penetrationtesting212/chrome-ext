@@ -205,16 +205,16 @@ Choose the right document for your needs:
 ## 🆘 Need Help?
 
 ### Quick Answers
-- **Q: How do I start?**  
+- **Q: How do I start?**
   A: Read [Quickstart Guide](./API_TESTING_QUICKSTART.md)
 
-- **Q: How do I create a test?**  
+- **Q: How do I create a test?**
   A: See [User Guide - Test Cases](./API_TESTING_GUIDE.md#api-test-cases)
 
-- **Q: How do mocks work?**  
+- **Q: How do mocks work?**
   A: See [User Guide - Mocks](./API_TESTING_GUIDE.md#api-mocks--stubs)
 
-- **Q: What's the architecture?**  
+- **Q: What's the architecture?**
   A: See [Implementation Guide](./API_TESTING_IMPLEMENTATION.md)
 
 ### Support Channels
@@ -254,7 +254,7 @@ Found an error? Want to improve documentation?
 
 Choose your reading path above and start learning! 🚀
 
-**Recommended first step:**  
+**Recommended first step:**
 👉 [Quickstart Guide](./API_TESTING_QUICKSTART.md) - Get started in 5 minutes!
 
 ---
@@ -263,6 +263,6 @@ Choose your reading path above and start learning! 🚀
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: 2025-10-23  
+**Version**: 1.0.0
+**Last Updated**: 2025-10-23
 **License**: Apache 2.0

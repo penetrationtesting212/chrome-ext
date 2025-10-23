@@ -93,7 +93,7 @@ export const DebuggerPanel: React.FC<DebuggerPanelProps> = ({ fileId, currentLin
           <button onClick={onClose} style={{ marginLeft: 'auto' }}>Close</button>
         )}
       </div>
-      
+
       {isPaused && executionContext ? (
         <div className="debugger-content">
           <div className="debugger-controls">
@@ -102,7 +102,7 @@ export const DebuggerPanel: React.FC<DebuggerPanelProps> = ({ fileId, currentLin
             <button onClick={handleStepInto}>Step Into (F11)</button>
             <button onClick={handleStepOut}>Step Out (Shift+F11)</button>
           </div>
-          
+
           <div className="variables-section">
             <h4>Variables</h4>
             <div className="variables-list">
@@ -115,7 +115,7 @@ export const DebuggerPanel: React.FC<DebuggerPanelProps> = ({ fileId, currentLin
               ))}
             </div>
           </div>
-          
+
           <div className="eval-section">
             <h4>Evaluate Expression</h4>
             <div className="eval-input">

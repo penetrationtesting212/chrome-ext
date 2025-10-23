@@ -1,6 +1,6 @@
 # 🏗️ PLAYWRIGHT-CRX ENHANCED - ARCHITECTURE DIAGRAMS
 
-**Version**: 1.0.0  
+**Version**: 1.0.0
 **Date**: 2025-10-23
 
 ---
@@ -120,7 +120,7 @@ graph LR
 
     API_Service -->|REST API| Controllers
     Test_Executor -->|WebSocket| Backend_Detail
-    
+
     Controllers --> Routes
     Routes --> Middleware
     Middleware --> Prisma
@@ -165,22 +165,22 @@ graph TD
     LoadScript --> CreateRun[Create Test Run]
     CreateRun --> InitWS[Initialize WebSocket]
     InitWS --> ParseSteps[Parse Test Steps]
-    
+
     ParseSteps --> ExecuteStep[Execute Step]
     ExecuteStep --> StepSuccess{Step Success?}
-    
+
     StepSuccess -->|Yes| SendProgress[Send Progress Update]
     StepSuccess -->|No| TrySelfHeal{Self-Healing Enabled?}
-    
+
     TrySelfHeal -->|Yes| FindLocator[Find Alternative Locator]
     FindLocator --> LocatorFound{Found?}
     LocatorFound -->|Yes| SaveHealed[Save Healed Locator]
     LocatorFound -->|No| LogError[Log Error]
     TrySelfHeal -->|No| LogError
-    
+
     SaveHealed --> SendProgress
     LogError --> SendProgress
-    
+
     SendProgress --> MoreSteps{More Steps?}
     MoreSteps -->|Yes| ExecuteStep
     MoreSteps -->|No| Complete[Mark Run Complete]
@@ -199,17 +199,17 @@ erDiagram
     User ||--o{ TestRun : executes
     User ||--o{ RefreshToken : has
     User ||--o{ TestDataFile : uploads
-    
+
     Project ||--o{ Script : contains
-    
+
     Script ||--o{ TestRun : executes
     Script ||--o{ SelfHealingLocator : has
     Script ||--o{ TestDataFile : uses
     Script ||--o{ Variable : defines
     Script ||--o{ Breakpoint : has
-    
+
     TestRun ||--o{ TestStep : contains
-    
+
     TestDataFile ||--o{ TestDataRow : contains
 
     User {
@@ -256,7 +256,7 @@ erDiagram
 ```mermaid
 graph TB
     Client[Extension/Frontend]
-    
+
     subgraph API_Routes["API Routes /api"]
         Auth["/auth"]
         Scripts["/scripts"]
@@ -305,34 +305,34 @@ graph TD
     Start[Element Not Found] --> CheckEnabled{Self-Healing Enabled?}
     CheckEnabled -->|No| Fail[Test Fails]
     CheckEnabled -->|Yes| FindAlternatives[Find Alternative Locators]
-    
+
     FindAlternatives --> Strategies[Try Locator Strategies]
     Strategies --> TestID[1. Test ID]
     Strategies --> Text[2. Text Content]
     Strategies --> ARIA[3. ARIA Labels]
     Strategies --> CSS[4. CSS Selectors]
     Strategies --> XPath[5. XPath]
-    
+
     TestID --> Found{Found?}
     Text --> Found
     ARIA --> Found
     CSS --> Found
     XPath --> Found
-    
+
     Found -->|Yes| CalculateConfidence[Calculate Confidence Score]
     Found -->|No| NextStrategy{More Strategies?}
-    
+
     NextStrategy -->|Yes| Strategies
     NextStrategy -->|No| Fail
-    
+
     CalculateConfidence --> HighConfidence{Confidence > 80%?}
     HighConfidence -->|Yes| UseLocator[Use Locator]
     HighConfidence -->|No| RequestApproval[Request User Approval]
-    
+
     RequestApproval --> Approved{Approved?}
     Approved -->|Yes| SaveToDB[Save to Database]
     Approved -->|No| Fail
-    
+
     UseLocator --> SaveToDB
     SaveToDB --> ContinueTest[Continue Test Execution]
 ```
@@ -344,21 +344,21 @@ graph TD
 ```mermaid
 graph TD
     Root[play-crx-feature-test-execution]
-    
+
     Root --> Src[src/]
     Root --> Examples[examples/]
     Root --> Tests[tests/]
     Root --> Enhanced[playwright-crx-enhanced/]
     Root --> Playwright[playwright/]
-    
+
     Src --> Client[client/]
     Src --> Server[server/]
     Src --> Protocol[protocol/]
     Src --> Types[types/]
-    
+
     Examples --> RecorderCRX[recorder-crx/]
     Examples --> TodoMVC[todomvc-crx/]
-    
+
     RecorderCRX --> RecorderSrc[src/]
     RecorderSrc --> CrxRecorder[crxRecorder.tsx]
     RecorderSrc --> TestExecutorUI[testExecutorUI.tsx]
@@ -367,19 +367,19 @@ graph TD
     RecorderSrc --> DebuggerUI[debuggerUI.tsx]
     RecorderSrc --> APIService[apiService.ts]
     RecorderSrc --> CodeGenerator[codeGenerator.ts]
-    
+
     Enhanced --> Backend[backend/]
     Enhanced --> Frontend[frontend/]
-    
+
     Backend --> BackendSrc[src/]
     Backend --> Prisma[prisma/]
-    
+
     BackendSrc --> Controllers[controllers/]
     BackendSrc --> Routes[routes/]
     BackendSrc --> Middleware[middleware/]
     BackendSrc --> Services[services/]
     BackendSrc --> WebSocketDir[websocket/]
-    
+
     Prisma --> Schema[schema.prisma]
     Prisma --> Migrations[migrations/]
     Prisma --> Seed[seed.ts]
@@ -402,13 +402,13 @@ graph TB
         UserBrowser[Chrome Browser]
         ProdExtension[Extension Published]
         LoadBalancer[Load Balancer]
-        
+
         subgraph BackendCluster["Backend Cluster"]
             API1[API Server 1]
             API2[API Server 2]
             API3[API Server 3]
         end
-        
+
         ProdDB[(PostgreSQL Cluster)]
         Redis[(Redis Cache)]
     end
@@ -422,11 +422,11 @@ graph TB
     LoadBalancer --> API1
     LoadBalancer --> API2
     LoadBalancer --> API3
-    
+
     API1 --> ProdDB
     API2 --> ProdDB
     API3 --> ProdDB
-    
+
     API1 --> Redis
     API2 --> Redis
     API3 --> Redis
@@ -455,7 +455,7 @@ sequenceDiagram
     User->>Extension: Select Data File
     User->>Extension: Execute DDT
     Extension->>API: POST /api/test-runs (with fileId)
-    
+
     loop For Each Row
         API->>Database: Get Row Data
         Database-->>API: Row Variables
@@ -463,7 +463,7 @@ sequenceDiagram
         API->>API: Execute Test with Data
         API-->>Extension: Progress Update
     end
-    
+
     API->>Database: Save Aggregated Results
     API-->>Extension: Execution Complete
 ```
@@ -477,9 +477,9 @@ graph LR
     UserAction[User Actions in Browser] --> Recorder[Recorder Captures Events]
     Recorder --> Actions[Action Objects]
     Actions --> CodeGen[Code Generator]
-    
+
     CodeGen --> Language{Select Language}
-    
+
     Language -->|TypeScript| TSTemplate[TypeScript Template]
     Language -->|JavaScript| JSTemplate[JavaScript Template]
     Language -->|Python| PyTemplate[Python Template]
@@ -487,7 +487,7 @@ graph LR
     Language -->|JUnit| JUnitTemplate[JUnit Template]
     Language -->|C#| CSharpTemplate[C# Template]
     Language -->|Robot| RobotTemplate[Robot Framework Template]
-    
+
     TSTemplate --> GeneratedCode[Generated Test Code]
     JSTemplate --> GeneratedCode
     PyTemplate --> GeneratedCode
@@ -495,7 +495,7 @@ graph LR
     JUnitTemplate --> GeneratedCode
     CSharpTemplate --> GeneratedCode
     RobotTemplate --> GeneratedCode
-    
+
     GeneratedCode --> Display[Display in Editor]
     Display --> Save[Save to File/Cloud]
 ```
@@ -507,31 +507,31 @@ graph LR
 ```mermaid
 graph TB
     Client[Client Request]
-    
+
     Client --> HTTPS[HTTPS Layer]
     HTTPS --> CORS[CORS Validation]
     CORS --> RateLimit[Rate Limiting]
     RateLimit --> Helmet[Security Headers]
-    
+
     Helmet --> AuthCheck{Requires Auth?}
     AuthCheck -->|No| PublicRoute[Public Route]
     AuthCheck -->|Yes| ValidateJWT[Validate JWT Token]
-    
+
     ValidateJWT --> TokenValid{Token Valid?}
     TokenValid -->|No| Unauthorized[401 Unauthorized]
     TokenValid -->|Yes| CheckPermission[Check Permissions]
-    
+
     CheckPermission --> HasPermission{Has Permission?}
     HasPermission -->|No| Forbidden[403 Forbidden]
     HasPermission -->|Yes| Controller[Execute Controller]
-    
+
     PublicRoute --> Controller
-    
+
     Controller --> Validation[Input Validation]
     Validation --> Sanitization[Data Sanitization]
     Sanitization --> PrismaORM[Prisma ORM]
     PrismaORM --> Database[(Database)]
-    
+
     Database --> Response[Generate Response]
     Response --> Client
 ```
@@ -580,26 +580,26 @@ graph LR
 ```mermaid
 graph TD
     CrxRecorder[CrxRecorder Main Component]
-    
+
     CrxRecorder --> Toolbar[Toolbar]
     CrxRecorder --> CodePanel[Code Panel]
     CrxRecorder --> EnhancedFeatures[Enhanced Features Panel]
-    
+
     Toolbar --> RecordBtn[Record Button]
     Toolbar --> StopBtn[Stop Button]
     Toolbar --> LanguageSelect[Language Selector]
     Toolbar --> FeatureButtons[Feature Buttons]
-    
+
     FeatureButtons --> TestExecutorBtn[Test Executor]
     FeatureButtons --> DebuggerBtn[Debugger]
     FeatureButtons --> SelfHealingBtn[Self-Healing]
     FeatureButtons --> DDTBtn[Data-Driven Testing]
-    
+
     EnhancedFeatures --> TestExecutorUI[Test Executor UI]
     EnhancedFeatures --> DebuggerUI[Debugger UI]
     EnhancedFeatures --> SelfHealingUI[Self-Healing UI]
     EnhancedFeatures --> DDTUI[DDT UI]
-    
+
     TestExecutorUI --> AuthStatus[Auth Status]
     TestExecutorUI --> LoginModal[Login Modal]
     TestExecutorUI --> ScriptLibrary[Script Library]
@@ -638,6 +638,6 @@ graph TD
 
 ---
 
-**Generated**: 2025-10-23  
-**Version**: 1.0.0  
+**Generated**: 2025-10-23
+**Version**: 1.0.0
 **Status**: Production Ready ✅

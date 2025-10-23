@@ -85,7 +85,7 @@ export const CrxRecorder: React.FC = ({
   const [log, setLog] = React.useState(new Map<string, CallLog>());
   const [mode, setMode] = React.useState<Mode>('none');
   const [selectedFileId, setSelectedFileId] = React.useState<string>(defaultSettings.targetLanguage);
-  
+
   // Enhanced features state
   const [showSelfHealing, setShowSelfHealing] = React.useState(false);
   const [showAISelfHealing, setShowAISelfHealing] = React.useState(false);
@@ -230,7 +230,7 @@ export const CrxRecorder: React.FC = ({
 
   const handleSaveToDatabase = React.useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!scriptName.trim()) {
       setSaveError('Script name is required');
       return;
@@ -251,7 +251,7 @@ export const CrxRecorder: React.FC = ({
         selectedFileId,
         scriptDescription.trim() || undefined
       );
-      
+
       setSaveSuccess(true);
       setTimeout(() => {
         setShowSaveModal(false);
@@ -423,8 +423,8 @@ export const CrxRecorder: React.FC = ({
         <div className="auth-box" style={{ maxWidth: '500px' }}>
           <div className="auth-header">
             <h2>Save Script to Database</h2>
-            <button 
-              onClick={() => setShowSaveModal(false)} 
+            <button
+              onClick={() => setShowSaveModal(false)}
               style={{ position: 'absolute', right: '20px', top: '20px', background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}
             >
               ×
@@ -437,7 +437,7 @@ export const CrxRecorder: React.FC = ({
                 {saveError}
               </div>
             )}
-            
+
             {saveSuccess && (
               <div className="auth-success" style={{ background: '#d4edda', color: '#155724', padding: '12px', borderRadius: '4px', marginBottom: '15px' }}>
                 ✓ Script saved successfully!
@@ -479,17 +479,17 @@ export const CrxRecorder: React.FC = ({
             </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button 
-                type="submit" 
-                className="auth-button" 
+              <button
+                type="submit"
+                className="auth-button"
                 disabled={isSaving || saveSuccess}
                 style={{ flex: 1 }}
               >
                 {isSaving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save to Database'}
               </button>
-              <button 
-                type="button" 
-                onClick={() => setShowSaveModal(false)} 
+              <button
+                type="button"
+                onClick={() => setShowSaveModal(false)}
                 disabled={isSaving}
                 style={{ flex: 1, background: '#6c757d' }}
                 className="auth-button"
@@ -526,39 +526,39 @@ export const CrxRecorder: React.FC = ({
         </Toolbar>
       </>}
       <Recorder sources={sources} paused={paused} log={log} mode={mode} onEditedCode={dispatchEditedCode} onCursorActivity={dispatchCursorActivity} />
-      
+
       {/* Enhanced Features Panels */}
       {showSelfHealing && (
         <div style={{ position: 'absolute', top: 0, right: 0, width: '400px', height: '100%', background: 'var(--vscode-sideBar-background)', borderLeft: '1px solid var(--vscode-panel-border)', zIndex: 1000, overflow: 'auto' }}>
           <SelfHealingUI onClose={toggleSelfHealing} />
         </div>
       )}
-      
+
       {showAISelfHealing && (
         <div style={{ position: 'absolute', top: 0, right: 0, width: '550px', height: '100%', background: 'var(--vscode-sideBar-background)', borderLeft: '1px solid var(--vscode-panel-border)', zIndex: 1000, overflow: 'auto' }}>
           <AISelfHealingUI onClose={toggleAISelfHealing} />
         </div>
       )}
-      
+
       {showDDT && (
         <div style={{ position: 'absolute', top: 0, right: 0, width: '500px', height: '100%', background: 'var(--vscode-sideBar-background)', borderLeft: '1px solid var(--vscode-panel-border)', zIndex: 1000, overflow: 'auto' }}>
           <DDTManager onFileSelected={(fileId) => console.log('Selected file:', fileId)} />
           <button onClick={toggleDDT} style={{ position: 'absolute', top: '10px', right: '10px' }}>Close</button>
         </div>
       )}
-      
+
       {showDebugger && (
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '300px', background: 'var(--vscode-sideBar-background)', borderTop: '1px solid var(--vscode-panel-border)', zIndex: 1000, overflow: 'auto' }}>
           <DebuggerUI onClose={toggleDebugger} />
         </div>
       )}
-      
+
       {showTestExecutor && (
         <div style={{ position: 'absolute', top: 0, right: 0, width: '450px', height: '100%', background: 'var(--vscode-sideBar-background)', borderLeft: '1px solid var(--vscode-panel-border)', zIndex: 1000, overflow: 'auto' }}>
           <TestExecutorUI onClose={toggleTestExecutor} script={source?.text || ''} scriptName={selectedFileId} />
         </div>
       )}
-      
+
       {showApiTesting && (
         <div style={{ position: 'absolute', top: 0, right: 0, width: '550px', height: '100%', background: 'var(--vscode-sideBar-background)', borderLeft: '1px solid var(--vscode-panel-border)', zIndex: 1000, overflow: 'auto' }}>
           <ApiTestingUI onClose={toggleApiTesting} />

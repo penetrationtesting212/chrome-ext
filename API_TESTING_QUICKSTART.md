@@ -59,7 +59,7 @@ npm run build
 2. Click **"▶️ Run"** on your test
 3. Wait for execution
 
-**You should see**: 
+**You should see**:
 - ✅ Green checkmarks for passed assertions
 - Response status, time, and body
 

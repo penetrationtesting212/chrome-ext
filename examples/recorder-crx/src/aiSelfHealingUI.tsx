@@ -52,19 +52,19 @@ export const AISelfHealingUI: React.FC<AISelfHealingUIProps> = ({ onClose }) => 
 
   React.useEffect(() => {
     loadData();
-    
+
     // Start listening for real data
     realDataIntegration.startListening();
-    
+
     // Simulate some test executions for demonstration
     setTimeout(() => {
       realDataIntegration.simulateTestExecution('demo-script-1', true);
     }, 2000);
-    
+
     setTimeout(() => {
       realDataIntegration.simulateTestExecution('demo-script-2', true);
     }, 5000);
-    
+
     return () => {
       realDataIntegration.stopListening();
     };
@@ -75,16 +75,16 @@ export const AISelfHealingUI: React.FC<AISelfHealingUIProps> = ({ onClose }) => 
     try {
       // Get real statistics from integration service
       const realStats = await realDataIntegration.getRealHealingStatistics();
-      
+
       // Get AI service statistics
       const aiStats = await aiSelfHealingService.getHealingStatistics();
-      
+
       // Get real healing history
       const realHistory = await realDataIntegration.getRealHealingHistory();
-      
+
       // Get current config
       const currentConfig = await aiSelfHealingService.getConfig();
-      
+
       // Combine real and AI statistics
       const combinedStats = {
         totalHealings: realStats.totalHealings + aiStats.totalHealings,
@@ -94,7 +94,7 @@ export const AISelfHealingUI: React.FC<AISelfHealingUIProps> = ({ onClose }) => 
         averageConfidence: aiStats.averageConfidence,
         topStrategies: aiStats.topStrategies
       };
-      
+
       setStatistics(combinedStats);
       setHistory(realHistory);
       setConfig(currentConfig);
@@ -109,7 +109,7 @@ export const AISelfHealingUI: React.FC<AISelfHealingUIProps> = ({ onClose }) => 
     try {
       // Get real healing history
       const realHistory = await realDataIntegration.getRealHealingHistory();
-      
+
       // Convert to HealingRecord format
       return realHistory.map(record => ({
         id: record.id,
@@ -190,16 +190,16 @@ export const AISelfHealingUI: React.FC<AISelfHealingUIProps> = ({ onClose }) => 
   }
 
   return (
-    <div style={{ 
-      height: '100%', 
-      display: 'flex', 
+    <div style={{
+      height: '100%',
+      display: 'flex',
       flexDirection: 'column',
       background: 'var(--vscode-sideBar-background)',
       color: 'var(--vscode-sideBar-foreground)'
     }}>
       {/* Header */}
-      <div style={{ 
-        padding: '15px', 
+      <div style={{
+        padding: '15px',
         borderBottom: '1px solid var(--vscode-panel-border)',
         display: 'flex',
         alignItems: 'center',
@@ -211,12 +211,12 @@ export const AISelfHealingUI: React.FC<AISelfHealingUIProps> = ({ onClose }) => 
             AI Self-Healing
           </h3>
         </div>
-        <button 
+        <button
           onClick={onClose}
-          style={{ 
-            background: 'none', 
-            border: 'none', 
-            fontSize: '20px', 
+          style={{
+            background: 'none',
+            border: 'none',
+            fontSize: '20px',
             cursor: 'pointer',
             color: 'var(--vscode-sideBar-foreground)',
             padding: '0',
@@ -232,8 +232,8 @@ export const AISelfHealingUI: React.FC<AISelfHealingUIProps> = ({ onClose }) => 
       </div>
 
       {/* Tabs */}
-      <div style={{ 
-        display: 'flex', 
+      <div style={{
+        display: 'flex',
         borderBottom: '1px solid var(--vscode-panel-border)',
         background: 'var(--vscode-editor-background)'
       }}>
@@ -250,11 +250,11 @@ export const AISelfHealingUI: React.FC<AISelfHealingUIProps> = ({ onClose }) => 
               flex: 1,
               padding: '10px',
               border: 'none',
-              background: activeTab === tab.id 
-                ? 'var(--vscode-tab-activeBackground)' 
+              background: activeTab === tab.id
+                ? 'var(--vscode-tab-activeBackground)'
                 : 'transparent',
-              color: activeTab === tab.id 
-                ? 'var(--vscode-tab-activeForeground)' 
+              color: activeTab === tab.id
+                ? 'var(--vscode-tab-activeForeground)'
                 : 'var(--vscode-tab-inactiveForeground)',
               cursor: 'pointer',
               fontSize: '12px',
@@ -273,14 +273,14 @@ export const AISelfHealingUI: React.FC<AISelfHealingUIProps> = ({ onClose }) => 
       {/* Content */}
       <div style={{ flex: 1, overflow: 'auto', padding: '15px' }}>
         {activeTab === 'dashboard' && (
-          <DashboardTab 
-            statistics={statistics} 
+          <DashboardTab
+            statistics={statistics}
             onRefresh={loadData}
           />
         )}
-        
+
         {activeTab === 'history' && (
-          <HistoryTab 
+          <HistoryTab
             history={history}
             selectedRecord={selectedRecord}
             onSelectRecord={setSelectedRecord}
@@ -288,16 +288,16 @@ export const AISelfHealingUI: React.FC<AISelfHealingUIProps> = ({ onClose }) => 
             onToggleDetails={() => setShowDetails(!showDetails)}
           />
         )}
-        
+
         {activeTab === 'config' && (
-          <ConfigTab 
+          <ConfigTab
             config={config}
             onUpdate={handleConfigUpdate}
           />
         )}
-        
+
         {activeTab === 'training' && (
-          <TrainingTab 
+          <TrainingTab
             trainingData={trainingData}
             isTraining={isTraining}
             onTrain={handleTrainModel}
@@ -319,9 +319,9 @@ const DashboardTab: React.FC<{
 
   return (
     <div>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '20px'
       }}>
@@ -343,9 +343,9 @@ const DashboardTab: React.FC<{
       </div>
 
       {/* Key Metrics */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: '1fr 1fr', 
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
         gap: '15px',
         marginBottom: '20px'
       }}>
@@ -377,27 +377,27 @@ const DashboardTab: React.FC<{
       {/* Top Strategies */}
       <div>
         <h5 style={{ margin: '0 0 10px 0', fontSize: '13px' }}>Top Healing Strategies</h5>
-        <div style={{ 
+        <div style={{
           background: 'var(--vscode-editor-background)',
           border: '1px solid var(--vscode-panel-border)',
           borderRadius: '4px',
           padding: '10px'
         }}>
           {statistics.topStrategies.map((strategy, index) => (
-            <div 
+            <div
               key={strategy.strategy}
-              style={{ 
-                display: 'flex', 
+              style={{
+                display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 padding: '8px 0',
-                borderBottom: index < statistics.topStrategies.length - 1 
-                  ? '1px solid var(--vscode-panel-border)' 
+                borderBottom: index < statistics.topStrategies.length - 1
+                  ? '1px solid var(--vscode-panel-border)'
                   : 'none'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ 
+                <span style={{
                   background: 'var(--vscode-badge-background)',
                   color: 'var(--vscode-badge-foreground)',
                   padding: '2px 6px',
@@ -415,7 +415,7 @@ const DashboardTab: React.FC<{
                 <span style={{ fontSize: '11px', color: 'var(--vscode-descriptionForeground)' }}>
                   {strategy.count} uses
                 </span>
-                <span style={{ 
+                <span style={{
                   fontSize: '11px',
                   color: strategy.successRate >= 0.8 ? '#28a745' : '#ffc107',
                   fontWeight: 'bold'
@@ -463,9 +463,9 @@ const HistoryTab: React.FC<{
 
   return (
     <div>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '15px'
       }}>
@@ -487,8 +487,8 @@ const HistoryTab: React.FC<{
       </div>
 
       {history.length === 0 ? (
-        <div style={{ 
-          textAlign: 'center', 
+        <div style={{
+          textAlign: 'center',
           padding: '40px 20px',
           color: 'var(--vscode-descriptionForeground)'
         }}>
@@ -499,7 +499,7 @@ const HistoryTab: React.FC<{
           </p>
         </div>
       ) : (
-        <div style={{ 
+        <div style={{
           background: 'var(--vscode-editor-background)',
           border: '1px solid var(--vscode-panel-border)',
           borderRadius: '4px',
@@ -514,14 +514,14 @@ const HistoryTab: React.FC<{
                 padding: '12px',
                 borderBottom: '1px solid var(--vscode-panel-border)',
                 cursor: 'pointer',
-                background: selectedRecord?.id === record.id 
-                  ? 'var(--vscode-list-activeSelectionBackground)' 
+                background: selectedRecord?.id === record.id
+                  ? 'var(--vscode-list-activeSelectionBackground)'
                   : 'transparent',
                 transition: 'background 0.2s'
               }}
             >
-              <div style={{ 
-                display: 'flex', 
+              <div style={{
+                display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'flex-start',
                 marginBottom: '8px'
@@ -532,8 +532,8 @@ const HistoryTab: React.FC<{
                     <div style={{ fontSize: '12px', fontWeight: '500' }}>
                       {record.context.elementType}
                     </div>
-                    <div style={{ 
-                      fontSize: '10px', 
+                    <div style={{
+                      fontSize: '10px',
                       color: 'var(--vscode-descriptionForeground)',
                       marginTop: '2px'
                     }}>
@@ -541,7 +541,7 @@ const HistoryTab: React.FC<{
                     </div>
                   </div>
                 </div>
-                <div style={{ 
+                <div style={{
                   fontSize: '11px',
                   color: getConfidenceColor(record.confidence),
                   fontWeight: 'bold',
@@ -552,7 +552,7 @@ const HistoryTab: React.FC<{
               </div>
 
               {showDetails && (
-                <div style={{ 
+                <div style={{
                   fontSize: '10px',
                   color: 'var(--vscode-descriptionForeground)',
                   marginTop: '8px',
@@ -560,8 +560,8 @@ const HistoryTab: React.FC<{
                   borderTop: '1px solid var(--vscode-panel-border)'
                 }}>
                   <div style={{ marginBottom: '4px' }}>
-                    <strong>Original:</strong> 
-                    <code style={{ 
+                    <strong>Original:</strong>
+                    <code style={{
                       background: 'var(--vscode-textBlockQuote-background)',
                       padding: '2px 4px',
                       borderRadius: '2px',
@@ -573,8 +573,8 @@ const HistoryTab: React.FC<{
                     </code>
                   </div>
                   <div style={{ marginBottom: '4px' }}>
-                    <strong>Healed:</strong> 
-                    <code style={{ 
+                    <strong>Healed:</strong>
+                    <code style={{
                       background: 'var(--vscode-textBlockQuote-background)',
                       padding: '2px 4px',
                       borderRadius: '2px',
@@ -590,7 +590,7 @@ const HistoryTab: React.FC<{
                   </div>
                   {record.rollback && (
                     <div style={{ color: '#dc3545' }}>
-                      <strong>Rolled back:</strong> {record.rollback.reason} 
+                      <strong>Rolled back:</strong> {record.rollback.reason}
                       ({formatDate(record.rollback.timestamp)})
                     </div>
                   )}
@@ -614,7 +614,7 @@ const ConfigTab: React.FC<{
   return (
     <div>
       <h4 style={{ margin: '0 0 15px 0', fontSize: '14px' }}>AI Configuration</h4>
-      
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
         {/* Enable/Disable */}
         <ConfigToggle
@@ -688,8 +688,8 @@ const TrainingTab: React.FC<{
   return (
     <div>
       <h4 style={{ margin: '0 0 15px 0', fontSize: '14px' }}>ML Model Training</h4>
-      
-      <div style={{ 
+
+      <div style={{
         background: 'var(--vscode-editor-background)',
         border: '1px solid var(--vscode-panel-border)',
         borderRadius: '4px',
@@ -713,7 +713,7 @@ const TrainingTab: React.FC<{
         </div>
       </div>
 
-      <div style={{ 
+      <div style={{
         background: 'var(--vscode-textBlockQuote-background)',
         border: '1px solid var(--vscode-textBlockQuote-border)',
         borderRadius: '4px',
@@ -722,11 +722,11 @@ const TrainingTab: React.FC<{
       }}>
         <h5 style={{ margin: '0 0 10px 0', fontSize: '12px' }}>How It Works</h5>
         <div style={{ fontSize: '11px', lineHeight: '1.4' }}>
-          The AI model learns from past healing attempts to predict which locators 
+          The AI model learns from past healing attempts to predict which locators
           are most likely to succeed. It considers factors like:
         </div>
-        <ul style={{ 
-          margin: '10px 0 0 0', 
+        <ul style={{
+          margin: '10px 0 0 0',
           paddingLeft: '20px',
           fontSize: '11px',
           lineHeight: '1.4'
@@ -771,10 +771,10 @@ const TrainingTab: React.FC<{
           </>
         )}
       </button>
-      
+
       {trainingData.length < 10 && (
-        <div style={{ 
-          fontSize: '10px', 
+        <div style={{
+          fontSize: '10px',
           color: 'var(--vscode-descriptionForeground)',
           textAlign: 'center',
           marginTop: '8px'
@@ -802,16 +802,16 @@ const MetricCard: React.FC<{
       textAlign: 'center'
     }}>
       <div style={{ fontSize: '20px', marginBottom: '5px' }}>{icon}</div>
-      <div style={{ 
-        fontSize: '16px', 
+      <div style={{
+        fontSize: '16px',
         fontWeight: 'bold',
         color: color || 'var(--vscode-foreground)',
         marginBottom: '5px'
       }}>
         {value}
       </div>
-      <div style={{ 
-        fontSize: '10px', 
+      <div style={{
+        fontSize: '10px',
         color: 'var(--vscode-descriptionForeground)'
       }}>
         {label}
@@ -829,13 +829,13 @@ const ConfigToggle: React.FC<{
 }> = ({ label, description, enabled, onToggle, disabled }) => {
   return (
     <div>
-      <div style={{ 
-        display: 'flex', 
+      <div style={{
+        display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '5px'
       }}>
-        <label style={{ 
+        <label style={{
           fontSize: '12px',
           fontWeight: '500',
           color: disabled ? 'var(--vscode-disabledForeground)' : 'var(--vscode-foreground)'
@@ -850,8 +850,8 @@ const ConfigToggle: React.FC<{
             height: '20px',
             borderRadius: '10px',
             border: 'none',
-            background: enabled 
-              ? 'var(--vscode-button-background)' 
+            background: enabled
+              ? 'var(--vscode-button-background)'
               : 'var(--vscode-button-secondaryBackground)',
             position: 'relative',
             cursor: disabled ? 'not-allowed' : 'pointer',
@@ -870,8 +870,8 @@ const ConfigToggle: React.FC<{
           }} />
         </button>
       </div>
-      <div style={{ 
-        fontSize: '10px', 
+      <div style={{
+        fontSize: '10px',
         color: 'var(--vscode-descriptionForeground)',
         paddingLeft: '0'
       }}>
@@ -893,8 +893,8 @@ const ConfigSlider: React.FC<{
 }> = ({ label, description, value, min, max, step, onChange, formatValue }) => {
   return (
     <div>
-      <div style={{ 
-        display: 'flex', 
+      <div style={{
+        display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '5px'
@@ -902,7 +902,7 @@ const ConfigSlider: React.FC<{
         <label style={{ fontSize: '12px', fontWeight: '500' }}>
           {label}
         </label>
-        <span style={{ 
+        <span style={{
           fontSize: '11px',
           color: 'var(--vscode-foreground)',
           fontWeight: 'bold'
@@ -922,8 +922,8 @@ const ConfigSlider: React.FC<{
           marginBottom: '5px'
         }}
       />
-      <div style={{ 
-        fontSize: '10px', 
+      <div style={{
+        fontSize: '10px',
         color: 'var(--vscode-descriptionForeground)'
       }}>
         {description}

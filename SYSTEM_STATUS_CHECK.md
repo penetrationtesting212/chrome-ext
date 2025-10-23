@@ -73,7 +73,7 @@
 **Extension Features Integrated**:
 - ✅ Recorder UI with code generation
 - ✅ Self-Healing Locators UI
-- ✅ Data-Driven Testing UI  
+- ✅ Data-Driven Testing UI
 - ✅ Debugger UI
 - ✅ Test Executor UI
 - ✅ Authentication Modal

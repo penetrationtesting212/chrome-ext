@@ -54,50 +54,50 @@ export class TestExecutor {
       startTime: new Date(),
       logs: []
     };
-    
+
     this.activeRuns.set(testRun.id, testRun);
-    
+
     try {
       // Notify that execution is starting
       this.notifyProgress(testRun.id, {
         status: 'starting',
         message: 'Starting test execution...'
       });
-      
+
       // Call backend API to start test run
       const backendTestRun = await apiService.startTestRun(scriptId);
-      
+
       // Update test run with backend ID
       testRun.id = backendTestRun.id;
       testRun.status = 'running';
       this.activeRuns.set(testRun.id, testRun);
-      
+
       // Add initial log
       this.addLog(testRun.id, `Test execution started for script: ${scriptId}`);
-      
+
       // Notify running status
       this.notifyProgress(testRun.id, {
         status: 'running',
         message: 'Test is running...'
       });
-      
+
       // Poll for test results
       this.pollTestRunStatus(testRun.id);
-      
+
       return testRun;
     } catch (error: any) {
       console.error('Error executing test:', error);
-      
+
       // Update status to failed
       testRun.status = 'failed';
       testRun.endTime = new Date();
       this.activeRuns.set(testRun.id, testRun);
-      
+
       this.notifyProgress(testRun.id, {
         status: 'failed',
         error: error?.message || 'Failed to start test execution'
       });
-      
+
       throw error;
     }
   }
@@ -114,51 +114,51 @@ export class TestExecutor {
       startTime: new Date(),
       logs: []
     };
-    
+
     this.activeRuns.set(testRun.id, testRun);
-    
+
     try {
       // Notify that execution is starting
       this.notifyProgress(testRun.id, {
         status: 'starting',
         message: 'Starting data-driven test execution...'
       });
-      
+
       // Call backend API to start test run with data file
       const backendTestRun = await apiService.startTestRun(scriptId, dataFileId);
-      
+
       // Update test run with backend ID
       testRun.id = backendTestRun.id;
       testRun.status = 'running';
       this.activeRuns.set(testRun.id, testRun);
-      
+
       // Add initial log
       this.addLog(testRun.id, `Data-driven test execution started for script: ${scriptId}`);
       this.addLog(testRun.id, `Using data file: ${dataFileId}`);
-      
+
       // Notify running status
       this.notifyProgress(testRun.id, {
         status: 'running',
         message: 'Data-driven test is running...'
       });
-      
+
       // Poll for test results
       this.pollTestRunStatus(testRun.id);
-      
+
       return testRun;
     } catch (error: any) {
       console.error('Error executing data-driven test:', error);
-      
+
       // Update status to failed
       testRun.status = 'failed';
       testRun.endTime = new Date();
       this.activeRuns.set(testRun.id, testRun);
-      
+
       this.notifyProgress(testRun.id, {
         status: 'failed',
         error: error?.message || 'Failed to start data-driven test execution'
       });
-      
+
       throw error;
     }
   }
@@ -177,26 +177,26 @@ export class TestExecutor {
     const pollInterval = 2000; // Poll every 2 seconds
     const maxPolls = 150; // Max 5 minutes (150 * 2s)
     let pollCount = 0;
-    
+
     const poll = async () => {
       try {
         const testRun = this.activeRuns.get(testRunId);
         if (!testRun) return;
-        
+
         // Get test run status from backend
         const backendTestRun = await apiService.getTestRun(testRunId);
-        
+
         // Update logs
         if (backendTestRun.errorMsg) {
           this.addLog(testRunId, `Error: ${backendTestRun.errorMsg}`);
         }
-        
+
         // Check if test is complete
         if (backendTestRun.status === 'completed' || backendTestRun.status === 'passed') {
           testRun.status = 'passed';
           testRun.endTime = new Date();
           this.activeRuns.set(testRunId, testRun);
-          
+
           this.addLog(testRunId, 'Test execution completed successfully');
           this.notifyProgress(testRunId, {
             status: 'completed',
@@ -204,19 +204,19 @@ export class TestExecutor {
           });
           return;
         }
-        
+
         if (backendTestRun.status === 'failed' || backendTestRun.status === 'error') {
           testRun.status = 'failed';
           testRun.endTime = new Date();
           this.activeRuns.set(testRunId, testRun);
-          
+
           this.notifyProgress(testRunId, {
             status: 'failed',
             error: backendTestRun.errorMsg || 'Test execution failed'
           });
           return;
         }
-        
+
         // Continue polling if still running
         if (pollCount < maxPolls && (backendTestRun.status === 'running' || backendTestRun.status === 'queued')) {
           pollCount++;
@@ -226,7 +226,7 @@ export class TestExecutor {
           testRun.status = 'failed';
           testRun.endTime = new Date();
           this.activeRuns.set(testRunId, testRun);
-          
+
           this.notifyProgress(testRunId, {
             status: 'failed',
             error: 'Test execution timeout'
@@ -239,7 +239,7 @@ export class TestExecutor {
           testRun.status = 'failed';
           testRun.endTime = new Date();
           this.activeRuns.set(testRunId, testRun);
-          
+
           this.notifyProgress(testRunId, {
             status: 'failed',
             error: 'Failed to get test status'
@@ -247,11 +247,11 @@ export class TestExecutor {
         }
       }
     };
-    
+
     // Start polling
     setTimeout(poll, pollInterval);
   }
-  
+
   /**
    * Add log to test run
    */
@@ -259,7 +259,7 @@ export class TestExecutor {
     const testRun = this.activeRuns.get(testRunId);
     if (testRun) {
       testRun.logs.push(log);
-      
+
       // Notify log callback
       const logCallback = this.logCallbacks.get(testRunId);
       if (logCallback) {
@@ -276,16 +276,16 @@ export class TestExecutor {
     if (!testRun) {
       throw new Error('Test run not found');
     }
-    
+
     try {
       // Call backend API to stop test run
       await apiService.stopTestRun(testRunId);
-      
+
       // Update status to failed (cancelled)
       testRun.status = 'failed';
       testRun.endTime = new Date();
       this.activeRuns.set(testRunId, testRun);
-      
+
       this.addLog(testRunId, 'Test execution cancelled by user');
       this.notifyProgress(testRunId, {
         status: 'failed',

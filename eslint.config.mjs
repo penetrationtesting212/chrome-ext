@@ -60,7 +60,7 @@ const ignores = [
 
 export default [
   { ignores },
-  { 
+  {
     plugins,
     settings: {
       react: { version: 'detect' },

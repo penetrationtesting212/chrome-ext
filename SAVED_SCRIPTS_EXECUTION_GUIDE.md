@@ -205,29 +205,29 @@ await apiService.register('user@example.com', 'password', 'Your Name');
 
 ### **1. Regression Testing**
 ```
-Save common test scenarios → 
-Execute periodically → 
+Save common test scenarios →
+Execute periodically →
 Catch regressions early
 ```
 
 ### **2. Multi-Environment Testing**
 ```
-Save script once → 
-Execute on dev/staging/prod → 
+Save script once →
+Execute on dev/staging/prod →
 Compare results
 ```
 
 ### **3. Team Collaboration**
 ```
-Team member saves script → 
-You load and execute → 
+Team member saves script →
+You load and execute →
 Shared test library
 ```
 
 ### **4. Data-Driven Execution**
 ```
-Select saved script → 
-Choose data file → 
+Select saved script →
+Choose data file →
 Execute with multiple data sets
 ```
 
@@ -288,7 +288,7 @@ const [showScriptLibrary, setShowScriptLibrary] = useState<boolean>(false);
 
 ### **Not Authenticated**
 ```
-Error: Failed to load saved scripts. 
+Error: Failed to load saved scripts.
 Please ensure you are logged in.
 ```
 **Solution**: Login using `apiService.login()`
@@ -389,12 +389,12 @@ await apiService.createScript(
 ## 🎉 Summary
 
 You can now:
-✅ **Browse** all your saved scripts in a beautiful UI  
-✅ **Select** any script with one click  
-✅ **Execute** saved scripts instantly  
-✅ **Track** execution history  
-✅ **Combine** with data-driven testing  
-✅ **Share** scripts via cloud API  
+✅ **Browse** all your saved scripts in a beautiful UI
+✅ **Select** any script with one click
+✅ **Execute** saved scripts instantly
+✅ **Track** execution history
+✅ **Combine** with data-driven testing
+✅ **Share** scripts via cloud API
 
 This transforms the Test Executor into a **complete test management system**! 🚀
 

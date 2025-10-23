@@ -188,16 +188,16 @@ If you still see issues, clear extension storage:
 
 ## 🎯 What This Fixes
 
-✅ **Before:** Error when clicking extension icon  
+✅ **Before:** Error when clicking extension icon
 ✅ **After:** Clean login screen appears
 
-✅ **Before:** `Cannot read properties of undefined (reading 'accessToken')`  
+✅ **Before:** `Cannot read properties of undefined (reading 'accessToken')`
 ✅ **After:** Proper null checks prevent undefined errors
 
-✅ **Before:** Invalid tokens caused crashes  
+✅ **Before:** Invalid tokens caused crashes
 ✅ **After:** Invalid tokens are cleared automatically
 
-✅ **Before:** WebSocket auth failed silently  
+✅ **Before:** WebSocket auth failed silently
 ✅ **After:** WebSocket only sends auth when tokens are valid
 
 ---
@@ -248,7 +248,7 @@ For future code:
    ```typescript
    // ❌ Still can crash if property is undefined
    this.sendMessage('auth', { token: this.tokens?.accessToken });
-   
+
    // ✅ Proper check
    if (this.tokens && this.tokens.accessToken) {
      this.sendMessage('auth', { token: this.tokens.accessToken });
