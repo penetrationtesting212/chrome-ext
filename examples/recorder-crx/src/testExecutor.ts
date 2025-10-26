@@ -15,6 +15,7 @@
  */
 
 import { apiService } from './apiService';
+import { realDataIntegration } from './realDataIntegration';
 
 export interface TestRun {
   id: string;
@@ -71,6 +72,9 @@ export class TestExecutor {
       testRun.id = backendTestRun.id;
       testRun.status = 'running';
       this.activeRuns.set(testRun.id, testRun);
+
+      // Dispatch test started event for self-healing
+      this.dispatchTestStarted(testRun);
 
       // Add initial log
       this.addLog(testRun.id, `Test execution started for script: ${scriptId}`);
@@ -132,6 +136,9 @@ export class TestExecutor {
       testRun.status = 'running';
       this.activeRuns.set(testRun.id, testRun);
 
+      // Dispatch test started event for self-healing
+      this.dispatchTestStarted(testRun);
+
       // Add initial log
       this.addLog(testRun.id, `Data-driven test execution started for script: ${scriptId}`);
       this.addLog(testRun.id, `Using data file: ${dataFileId}`);
@@ -171,6 +178,28 @@ export class TestExecutor {
   }
 
   /**
+   * Dispatch test started event
+   */
+  private dispatchTestStarted(testRun: TestRun): void {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('testExecutionStarted', {
+        detail: { testExecution: testRun }
+      }));
+    }
+  }
+
+  /**
+   * Dispatch test completed event
+   */
+  private dispatchTestCompleted(testRun: TestRun): void {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('testExecutionCompleted', {
+        detail: { testExecution: testRun }
+      }));
+    }
+  }
+
+  /**
    * Poll test run status from backend
    */
   private async pollTestRunStatus(testRunId: string): Promise<void> {
@@ -202,6 +231,9 @@ export class TestExecutor {
             status: 'completed',
             message: 'Test execution completed successfully'
           });
+
+          // Dispatch test completed event for self-healing
+          this.dispatchTestCompleted(testRun);
           return;
         }
 
@@ -210,10 +242,18 @@ export class TestExecutor {
           testRun.endTime = new Date();
           this.activeRuns.set(testRunId, testRun);
 
+          // Capture failure for self-healing
+          if (backendTestRun.errorMsg && backendTestRun.errorMsg.includes('locator')) {
+            this.dispatchLocatorFailure(testRunId, backendTestRun.errorMsg);
+          }
+
           this.notifyProgress(testRunId, {
             status: 'failed',
             error: backendTestRun.errorMsg || 'Test execution failed'
           });
+
+          // Dispatch test completed event for self-healing
+          this.dispatchTestCompleted(testRun);
           return;
         }
 
@@ -333,6 +373,29 @@ export class TestExecutor {
     if (callback) {
       callback(progress);
     }
+  }
+
+  /**
+   * Dispatch locator failure event for self-healing
+   */
+  private dispatchLocatorFailure(testRunId: string, errorMsg: string): void {
+    if (typeof window === 'undefined') return;
+
+    // Extract locator from error message if possible
+    const locatorMatch = errorMsg.match(/locator[:\s]+['"](.*?)['"]/i) || 
+                        errorMsg.match(/selector[:\s]+['"](.*?)['"]/i) ||
+                        errorMsg.match(/element[:\s]+['"](.*?)['"]/i);
+    
+    const locator = locatorMatch ? locatorMatch[1] : 'unknown';
+
+    window.dispatchEvent(new CustomEvent('locatorFailed', {
+      detail: {
+        testId: testRunId,
+        step: 0,
+        locator,
+        error: errorMsg
+      }
+    }));
   }
 
   /**

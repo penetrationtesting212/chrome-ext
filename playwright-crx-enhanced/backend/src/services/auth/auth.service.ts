@@ -1,10 +1,9 @@
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
 import { logger } from '../../utils/logger';
 import { randomUUID } from 'crypto';
+import pool from '../../db';
 
-const prisma = new PrismaClient();
 
 interface TokenPayload {
   userId: string;
@@ -21,7 +20,6 @@ export class AuthService {
   constructor() {
     this.accessTokenSecret = process.env.JWT_ACCESS_SECRET || 'dev-access-secret';
     this.refreshTokenSecret = process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret';
-    // Updated expiry durations per request
     this.accessTokenExpiry = '10h';
     this.refreshTokenExpiry = '15h';
   }
@@ -30,30 +28,22 @@ export class AuthService {
    * Register a new user
    */
   async register(email: string, password: string, name: string) {
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
-
-    if (existingUser) {
+    const existing = await pool.query('SELECT id FROM "User" WHERE email = $1', [email]);
+    if (existing.rowCount && existing.rows[0]) {
       throw new Error('User already exists with this email');
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+    const userId = randomUUID();
 
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name
-      }
-    });
+    const insertUser = await pool.query(
+      'INSERT INTO "User"(id,email,password,name,"createdAt","updatedAt") VALUES ($1,$2,$3,$4,now(),now()) RETURNING id,email,name',
+      [userId, email, hashedPassword, name]
+    );
+    const user = insertUser.rows[0];
 
     logger.info(`New user registered: ${email}`);
 
-    // Generate tokens
     const { accessToken, refreshToken } = await this.generateTokens(user.id, user.email);
 
     return {
@@ -64,7 +54,6 @@ export class AuthService {
       },
       accessToken,
       refreshToken,
-      // 10 hours in seconds
       expiresIn: 36000
     };
   }
@@ -73,25 +62,22 @@ export class AuthService {
    * Login user
    */
   async login(email: string, password: string) {
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
-
+    const userRes = await pool.query(
+      'SELECT id,email,password,name FROM "User" WHERE email = $1',
+      [email]
+    );
+    const user = userRes.rows[0];
     if (!user) {
       throw new Error('Invalid credentials');
     }
 
-    // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
-
     if (!isValidPassword) {
       throw new Error('Invalid credentials');
     }
 
     logger.info(`User logged in: ${email}`);
 
-    // Generate tokens
     const { accessToken, refreshToken } = await this.generateTokens(user.id, user.email);
 
     return {
@@ -102,7 +88,6 @@ export class AuthService {
       },
       accessToken,
       refreshToken,
-      // 10 hours in seconds
       expiresIn: 36000
     };
   }
@@ -112,46 +97,36 @@ export class AuthService {
    */
   async refreshAccessToken(refreshToken: string) {
     try {
-      // Verify refresh token
       const decoded = jwt.verify(refreshToken, this.refreshTokenSecret) as TokenPayload;
-
       if (decoded.type !== 'refresh') {
         throw new Error('Invalid token type');
       }
 
-      // Check if refresh token exists in database and is not revoked
-      const tokenRecord = await prisma.refreshToken.findFirst({
-        where: {
-          token: refreshToken,
-          userId: decoded.userId,
-          expiresAt: { gt: new Date() },
-          revokedAt: null
-        }
-      });
-
-      if (!tokenRecord) {
+      const tokenRes = await pool.query(
+        `SELECT id FROM "RefreshToken"
+         WHERE token = $1 AND "userId" = $2 AND "expiresAt" > now() AND revokedAt IS NULL`,
+        [refreshToken, decoded.userId]
+      );
+      if (!tokenRes.rowCount) {
         throw new Error('Invalid or expired refresh token');
       }
 
-      // Get user
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.userId }
-      });
-
+      const userRes = await pool.query(
+        'SELECT id,email FROM "User" WHERE id = $1',
+        [decoded.userId]
+      );
+      const user = userRes.rows[0];
       if (!user) {
         throw new Error('User not found');
       }
 
-      // Generate new access token
       const accessToken = this.generateAccessToken(user.id, user.email);
-
       return {
         accessToken,
-        // 10 hours in seconds
         expiresIn: 36000
       };
     } catch (error) {
-      logger.error('Refresh token error:', error);
+      logger.error('Refresh token error:', error as any);
       throw new Error('Invalid refresh token');
     }
   }
@@ -161,15 +136,14 @@ export class AuthService {
    */
   async logout(refreshToken: string) {
     try {
-      await prisma.refreshToken.updateMany({
-        where: { token: refreshToken },
-        data: { revokedAt: new Date() }
-      });
-
+      await pool.query(
+        'UPDATE "RefreshToken" SET revokedAt = now() WHERE token = $1',
+        [refreshToken]
+      );
       logger.info('User logged out');
       return true;
     } catch (error) {
-      logger.error('Logout error:', error);
+      logger.error('Logout error:', error as any);
       return false;
     }
   }
@@ -181,14 +155,10 @@ export class AuthService {
     const accessToken = this.generateAccessToken(userId, email);
     const refreshToken = this.generateRefreshToken(userId);
 
-    // Store refresh token in database (15 hours)
-    await prisma.refreshToken.create({
-      data: {
-        token: refreshToken,
-        userId,
-        expiresAt: new Date(Date.now() + 15 * 60 * 60 * 1000)
-      }
-    });
+    await pool.query(
+      'INSERT INTO "RefreshToken"(id,token,"userId","expiresAt","createdAt") VALUES ($1,$2,$3,$4,now())',
+      [randomUUID(), refreshToken, userId, new Date(Date.now() + 15 * 60 * 60 * 1000)]
+    );
 
     return { accessToken, refreshToken };
   }
@@ -221,29 +191,24 @@ export class AuthService {
   verifyAccessToken(token: string): TokenPayload {
     try {
       const decoded = jwt.verify(token, this.accessTokenSecret) as TokenPayload;
-      
       if (decoded.type !== 'access') {
         throw new Error('Invalid token type');
       }
-
       return decoded;
-    } catch (error) {
+    } catch (_error) {
       throw new Error('Invalid or expired token');
     }
   }
 
   /**
-   * Clean up expired refresh tokens (should be run periodically)
+   * Clean up expired refresh tokens
    */
   async cleanupExpiredTokens() {
-    const result = await prisma.refreshToken.deleteMany({
-      where: {
-        expiresAt: { lt: new Date() }
-      }
-    });
-
-    logger.info(`Cleaned up ${result.count} expired tokens`);
-    return result.count;
+    const result = await pool.query(
+      'DELETE FROM "RefreshToken" WHERE "expiresAt" < now()'
+    );
+    logger.info(`Cleaned up ${result.rowCount} expired tokens`);
+    return result.rowCount;
   }
 }
 

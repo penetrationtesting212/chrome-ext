@@ -1,8 +1,6 @@
 import request from 'supertest';
 import { app } from '../src/index';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import pool from '../src/db';
 
 describe('Self-Healing API', () => {
   let authToken: string;
@@ -10,40 +8,28 @@ describe('Self-Healing API', () => {
   let testScript: any;
 
   beforeAll(async () => {
-    // Create a test user
-    testUser = await prisma.user.create({
-      data: {
-        email: 'selfhealing@test.com',
-        password: 'hashed-password', // In real tests, this would be properly hashed
-        name: 'Self Healing Test User'
-      }
-    });
+    const { rows: userRows } = await pool.query(
+      `INSERT INTO "User" (id,email,password,name, "createdAt", "updatedAt")
+       VALUES (gen_random_uuid()::text, $1, $2, $3, now(), now())
+       RETURNING id`,
+      ['selfhealing@test.com', 'hashed-password', 'Self Healing Test User']
+    );
+    testUser = { id: userRows[0].id };
 
-    // Create a test script
-    testScript = await prisma.script.create({
-      data: {
-        name: 'Test Script',
-        code: 'console.log("test");',
-        language: 'javascript',
-        userId: testUser.id
-      }
-    });
+    const { rows: scriptRows } = await pool.query(
+      `INSERT INTO "Script" (id,name,code,language,"userId","browserType","createdAt","updatedAt")
+       VALUES (gen_random_uuid()::text, $1, $2, $3, $4, 'chromium', now(), now())
+       RETURNING *`,
+      ['Test Script', 'console.log("test");', 'javascript', testUser.id]
+    );
+    testScript = scriptRows[0];
 
-    // For testing purposes, we'll mock the token
     authToken = 'mock-auth-token';
   });
 
   afterAll(async () => {
-    // Clean up test data
-    await prisma.script.deleteMany({
-      where: { userId: testUser.id }
-    });
-    
-    await prisma.user.deleteMany({
-      where: { email: 'selfhealing@test.com' }
-    });
-    
-    await prisma.$disconnect();
+    await pool.query('DELETE FROM "Script" WHERE "userId" = $1', [testUser.id]);
+    await pool.query('DELETE FROM "User" WHERE email = $1', ['selfhealing@test.com']);
   });
 
   describe('POST /api/self-healing/record-failure', () => {

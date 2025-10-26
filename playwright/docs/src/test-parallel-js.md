@@ -127,7 +127,7 @@ test('runs second', async () => {
 
 ## Opt out of fully parallel mode
 
-If your configuration applies parallel mode to all tests using [`property: TestConfig.fullyParallel`], you might still want to run some tests with default settings. You can override the mode per describe: 
+If your configuration applies parallel mode to all tests using [`property: TestConfig.fullyParallel`], you might still want to run some tests with default settings. You can override the mode per describe:
 ```js
 test.describe('runs in parallel with other describes', () => {
   test.describe.configure({ mode: 'default' });

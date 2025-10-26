@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
+import pool from '../db';
+import { randomUUID } from 'crypto';
 
-const prisma = new PrismaClient();
 
 export const handshake = async (req: Request, res: Response) => {
   try {
     const { extensionVersion, browserInfo } = req.body;
     logger.info('Extension handshake received', { extensionVersion, browserInfo });
-    
+
     res.json({
       success: true,
       serverVersion: '1.0.0',
@@ -33,7 +33,7 @@ export const heartbeat = async (req: Request, res: Response) => {
   try {
     const { timestamp, status } = req.body;
     logger.debug('Extension heartbeat', { timestamp, status });
-    
+
     res.json({
       success: true,
       serverTime: new Date().toISOString(),
@@ -50,16 +50,15 @@ export const saveScriptFromExtension = async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     const { name, description, language, code, browserType } = req.body;
 
-    const script = await prisma.script.create({
-      data: {
-        userId,
-        name,
-        description,
-        language,
-        code,
-        browserType: browserType || 'chromium',
-      },
-    });
+    const id = randomUUID();
+    const insertRes = await pool.query(
+      `INSERT INTO "Script"
+       (id, name, description, language, code, "userId", "browserType", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 'chromium'), now(), now())
+       RETURNING *`,
+      [id, name, description ?? null, language, code, userId, browserType]
+    );
+    const script = insertRes.rows[0];
 
     logger.info('Script saved from extension', { scriptId: script.id, userId });
     res.json({ success: true, script });
@@ -105,3 +104,4 @@ export const postExtensionLogs = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, error: 'Failed to log message' });
   }
 };
+

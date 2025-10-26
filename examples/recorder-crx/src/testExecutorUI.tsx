@@ -18,6 +18,7 @@ import * as React from 'react';
 import { testExecutor, TestRun, ExecutionProgress } from './testExecutor';
 import { ddtService } from './ddtService';
 import { apiService, Script } from './apiService';
+import { realDataIntegration } from './realDataIntegration';
 
 interface TestExecutorPanelProps {
   scriptId?: string;
@@ -68,6 +69,15 @@ export const TestExecutorPanel: React.FC<TestExecutorPanelProps> = ({ scriptId, 
       await loadSavedScripts();
     };
     loadData();
+
+    // Start listening for self-healing events
+    realDataIntegration.startListening();
+    console.log('✅ Self-healing integration started');
+
+    return () => {
+      realDataIntegration.stopListening();
+      console.log('🛑 Self-healing integration stopped');
+    };
   }, [loadSavedScripts]);
 
   const loaddataFiles = async () => {

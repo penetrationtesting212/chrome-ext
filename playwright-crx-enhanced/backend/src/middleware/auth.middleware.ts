@@ -24,35 +24,19 @@ export const authMiddleware = (
   next: NextFunction
 ): any => {
   try {
-    // Get token from Authorization header
     const authHeader = req.headers.authorization;
-
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'No token provided'
-      });
+      return res.status(401).json({ error: 'Unauthorized', message: 'No token provided' });
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
-    // Verify token
+    const token = authHeader.substring(7);
     const decoded = authService.verifyAccessToken(token);
 
-    // Attach user info to request
-    req.user = {
-      userId: decoded.userId,
-      email: decoded.email
-    };
-
+    req.user = { userId: decoded.userId, email: decoded.email };
     next();
   } catch (error: any) {
     logger.error('Authentication error:', error);
-    
-    return res.status(401).json({
-      error: 'Unauthorized',
-      message: error.message || 'Invalid or expired token'
-    });
+    return res.status(401).json({ error: 'Unauthorized', message: error.message || 'Invalid or expired token' });
   }
 };
 
@@ -67,20 +51,13 @@ export const optionalAuthMiddleware = async (
 ) => {
   try {
     const authHeader = req.headers.authorization;
-
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       const decoded = authService.verifyAccessToken(token);
-      
-      req.user = {
-        userId: decoded.userId,
-        email: decoded.email
-      };
+      req.user = { userId: decoded.userId, email: decoded.email };
     }
-
     next();
-  } catch (error) {
-    // Continue without authentication
+  } catch (_error) {
     next();
   }
 };

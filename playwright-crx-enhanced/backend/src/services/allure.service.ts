@@ -31,10 +31,10 @@ export class AllureService {
         start: Date.now(),
         steps: [],
       };
-      
+
       const resultsPath = path.join(ALLURE_RESULTS_DIR, `${testRunId}-result.json`);
       fs.writeFileSync(resultsPath, JSON.stringify(testData, null, 2));
-      
+
       return testData;
     } catch (error) {
       logger.error('Error starting Allure test:', error);
@@ -45,7 +45,7 @@ export class AllureService {
   async recordStep(testId: string, stepName: string, status: 'passed' | 'failed' | 'broken', duration?: number) {
     try {
       const resultsPath = path.join(ALLURE_RESULTS_DIR, `${testId}-result.json`);
-      
+
       const stepData = {
         name: stepName,
         status,
@@ -72,7 +72,7 @@ export class AllureService {
   async endTest(testId: string, status: 'passed' | 'failed' | 'broken', errorMessage?: string) {
     try {
       const resultsPath = path.join(ALLURE_RESULTS_DIR, `${testId}-result.json`);
-      
+
       const result = {
         uuid: testId,
         historyId: testId,
@@ -93,7 +93,7 @@ export class AllureService {
       }
 
       fs.writeFileSync(resultsPath, JSON.stringify(result, null, 2));
-      
+
       logger.info(`Allure test ended: ${testId} with status: ${status}`);
     } catch (error) {
       logger.error('Error ending Allure test:', error);
@@ -103,7 +103,7 @@ export class AllureService {
   async generateReport(testRunId: string): Promise<string> {
     try {
       const reportPath = path.join(ALLURE_REPORTS_DIR, testRunId);
-      
+
       if (!fs.existsSync(reportPath)) {
         fs.mkdirSync(reportPath, { recursive: true });
       }
@@ -138,7 +138,7 @@ export class AllureService {
       for (const report of reports) {
         const reportPath = path.join(ALLURE_REPORTS_DIR, report);
         const stats = fs.statSync(reportPath);
-        
+
         if (now - stats.mtimeMs > maxAge) {
           fs.rmSync(reportPath, { recursive: true, force: true });
           logger.info(`Cleaned up old Allure report: ${report}`);

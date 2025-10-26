@@ -1,8 +1,6 @@
 import request from 'supertest';
 import { app } from '../src/index';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import pool from '../src/db';
 
 describe('Authentication API', () => {
   const testUser = {
@@ -12,19 +10,11 @@ describe('Authentication API', () => {
   };
 
   beforeAll(async () => {
-    // Clean up any existing test user
-    await prisma.user.deleteMany({
-      where: { email: testUser.email }
-    });
+    await pool.query('DELETE FROM "User" WHERE email = $1', [testUser.email]);
   });
 
   afterAll(async () => {
-    // Clean up test user
-    await prisma.user.deleteMany({
-      where: { email: testUser.email }
-    });
-    
-    await prisma.$disconnect();
+    await pool.query('DELETE FROM "User" WHERE email = $1', [testUser.email]);
   });
 
   describe('POST /api/auth/register', () => {

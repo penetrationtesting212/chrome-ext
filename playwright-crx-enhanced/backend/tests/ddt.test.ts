@@ -1,8 +1,6 @@
 import request from 'supertest';
 import { app } from '../src/index';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import pool from '../src/db';
 
 describe('Data-Driven Testing (DDT) API', () => {
   let authToken: string;
@@ -10,44 +8,29 @@ describe('Data-Driven Testing (DDT) API', () => {
   let testScript: any;
 
   beforeAll(async () => {
-    // Create a test user
-    testUser = await prisma.user.create({
-      data: {
-        email: 'ddttest@example.com',
-        password: 'hashed-password', // In real tests, this would be properly hashed
-        name: 'DDT Test User'
-      }
-    });
+    const { rows: userRows } = await pool.query(
+      `INSERT INTO "User" (id,email,password,name, "createdAt", "updatedAt")
+       VALUES (gen_random_uuid()::text, $1, $2, $3, now(), now())
+       RETURNING id`,
+      ['ddttest@example.com', 'hashed-password', 'DDT Test User']
+    );
+    testUser = { id: userRows[0].id };
 
-    // Create a test script
-    testScript = await prisma.script.create({
-      data: {
-        name: 'Test Script',
-        code: 'console.log("test");',
-        language: 'javascript',
-        userId: testUser.id
-      }
-    });
+    const { rows: scriptRows } = await pool.query(
+      `INSERT INTO "Script" (id,name,code,language,"userId","browserType","createdAt","updatedAt")
+       VALUES (gen_random_uuid()::text, $1, $2, $3, $4, 'chromium', now(), now())
+       RETURNING *`,
+      ['Test Script', 'console.log("test");', 'javascript', testUser.id]
+    );
+    testScript = scriptRows[0];
 
-    // For testing purposes, we'll mock the token
     authToken = 'mock-auth-token';
   });
 
   afterAll(async () => {
-    // Clean up test data
-    await prisma.script.deleteMany({
-      where: { userId: testUser.id }
-    });
-    
-    await prisma.testDataFile.deleteMany({
-      where: { userId: testUser.id }
-    });
-    
-    await prisma.user.deleteMany({
-      where: { email: 'ddttest@example.com' }
-    });
-    
-    await prisma.$disconnect();
+    await pool.query('DELETE FROM "Script" WHERE "userId" = $1', [testUser.id]);
+    await pool.query('DELETE FROM "TestDataFile" WHERE "userId" = $1', [testUser.id]);
+    await pool.query('DELETE FROM "User" WHERE email = $1', ['ddttest@example.com']);
   });
 
   describe('POST /api/test-data/upload/csv', () => {
@@ -204,36 +187,31 @@ describe('Data-Driven Testing (DDT) API', () => {
         }
       });
 
-      // Create some test rows
-      await prisma.testDataRow.createMany({
-        data: [
-          {
-            fileId: testDataFile.id,
-            rowNumber: 1,
-            data: { col1: 'value1', col2: 'value2' }
-          },
-          {
-            fileId: testDataFile.id,
-            rowNumber: 2,
-            data: { col1: 'value3', col2: 'value4' }
-          }
-        ]
-      });
+      const { rows } = await pool.query(
+        `INSERT INTO "TestDataFile" (id, name, "fileName", "fileType", "fileSize", "userId", "scriptId", "rowCount", "columnNames", "createdAt", "updatedAt")
+         VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8::jsonb, now(), now())
+         RETURNING id`,
+        ['Test Data File', 'test.csv', 'csv', 100, testUser.id, testScript.id, 5, JSON.stringify(['col1','col2'])]
+      );
+      const testDataFileId = rows[0].id;
+
+      await pool.query(
+        `INSERT INTO "TestDataRow" (id, "fileId", "rowNumber", data, "createdAt") VALUES
+         (gen_random_uuid()::text, $1, 1, $2::jsonb, now()),
+         (gen_random_uuid()::text, $1, 2, $3::jsonb, now())`,
+        [testDataFileId, JSON.stringify({ col1: 'value1', col2: 'value2' }), JSON.stringify({ col1: 'value3', col2: 'value4' })]
+      );
 
       await request(app)
-        .get(`/api/test-data/execute/${testDataFile.id}`)
+        .get(`/api/test-data/execute/${testDataFileId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      // Test without authentication
       await request(app)
-        .get(`/api/test-data/execute/${testDataFile.id}`)
-        .expect(401); // Expect 401 Unauthorized
+        .get(`/api/test-data/execute/${testDataFileId}`)
+        .expect(401);
 
-      // Clean up
-      await prisma.testDataFile.delete({
-        where: { id: testDataFile.id }
-      });
+      await pool.query('DELETE FROM "TestDataFile" WHERE id = $1', [testDataFileId]);
     });
   });
 });

@@ -65,7 +65,7 @@ export class ContextRecorder extends EventEmitter {
     this._recorderSources = [];
     const language = params.language || context.attribution.playwright.options.sdkLanguage;
     this.setOutput(language, params.outputFile);
-    
+
     this._collection = new RecorderCollection(this._pageAliases);
     this._collection.on('change', (actions: actions.ActionInContext[]) => {
       const languageGeneratorOptions: LanguageGeneratorOptions = {

@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
 import { allureService } from '../services/allure.service';
 import { logger } from '../utils/logger';
-import { PrismaClient } from '@prisma/client';
+import pool from '../db';
 
-const prisma = new PrismaClient();
 
 export const generateReport = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -17,11 +16,10 @@ export const generateReport = async (req: Request, res: Response): Promise<void>
     const reportPath = await allureService.generateReport(testRunId);
     const reportUrl = await allureService.getReportUrl(testRunId);
 
-    // Update test run with Allure report URL
-    await prisma.testRun.update({
-      where: { id: testRunId },
-      data: { allureReportUrl: reportUrl }
-    });
+    await pool.query(
+      'UPDATE "TestRun" SET "allureReportUrl" = $2 WHERE id = $1',
+      [testRunId, reportUrl]
+    );
 
     logger.info(`Allure report generated for test run: ${testRunId}`);
 
@@ -47,40 +45,24 @@ export const getReportUrl = async (req: Request, res: Response): Promise<void> =
     const reportUrl = await allureService.getReportUrl(testRunId);
 
     if (!reportUrl) {
-      res.status(404).json({
-        success: false,
-        error: 'Report not found',
-      });
+      res.status(404).json({ success: false, error: 'Report not found' });
       return;
     }
 
-    res.json({
-      success: true,
-      reportUrl,
-    });
+    res.json({ success: true, reportUrl });
   } catch (error: any) {
     logger.error('Error getting Allure report URL:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to get report URL',
-    });
+    res.status(500).json({ success: false, error: error.message || 'Failed to get report URL' });
   }
 };
 
 export const getAllReports = async (_req: Request, res: Response) => {
   try {
     const reports = allureService.getAllReports();
-
-    res.json({
-      success: true,
-      reports,
-    });
+    res.json({ success: true, reports });
   } catch (error: any) {
     logger.error('Error getting all Allure reports:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to get reports',
-    });
+    res.status(500).json({ success: false, error: error.message || 'Failed to get reports' });
   }
 };
 
@@ -91,15 +73,10 @@ export const cleanupOldReports = async (req: Request, res: Response) => {
 
     await allureService.cleanupOldReports(daysToKeep);
 
-    res.json({
-      success: true,
-      message: `Cleaned up reports older than ${daysToKeep} days`,
-    });
+    res.json({ success: true, message: `Cleaned up reports older than ${daysToKeep} days` });
   } catch (error: any) {
     logger.error('Error cleaning up Allure reports:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to cleanup reports',
-    });
+    res.status(500).json({ success: false, error: error.message || 'Failed to cleanup reports' });
   }
 };
+

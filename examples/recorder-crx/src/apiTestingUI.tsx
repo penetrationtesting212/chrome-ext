@@ -47,7 +47,16 @@ export const ApiTestingUI: React.FC<ApiTestingUIProps> = ({ onClose }) => {
 
   React.useEffect(() => {
     loadData();
-  }, []);
+    
+    // Auto-refresh while recording to show new captured requests
+    const interval = setInterval(() => {
+      if (isRecording) {
+        loadData();
+      }
+    }, 1000); // Refresh every second while recording
+    
+    return () => clearInterval(interval);
+  }, [isRecording]);
 
   const loadData = () => {
     setCapturedRequests(apiTestingService.getCapturedRequests());
@@ -57,19 +66,68 @@ export const ApiTestingUI: React.FC<ApiTestingUIProps> = ({ onClose }) => {
   };
 
   const handleStartRecording = () => {
-    setIsRecording(true);
     apiTestingService.clearCapturedRequests();
     setCapturedRequests([]);
+    setIsRecording(true);
 
-    // In a real implementation, this would start intercepting network requests
-    // through the background script or content script
-    chrome.runtime.sendMessage({ type: 'startApiRecording' });
+    // Start intercepting network requests via debugger API
+    chrome.runtime.sendMessage({ type: 'startApiRecording' }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('Runtime error:', chrome.runtime.lastError);
+        
+        const errorMsg = chrome.runtime.lastError.message || '';
+        let userMessage = '❌ Failed to start recording: ' + errorMsg;
+        
+        // Check for specific error types
+        if (errorMsg.includes('already attached') || errorMsg.includes('Another debugger')) {
+          userMessage = '❌ Another debugger is already attached\n\n' +
+            'Solutions:\n' +
+            '1. Close Chrome DevTools (F12) on the target tab\n' +
+            '2. Close any other debugging tools\n' +
+            '3. Refresh the page and try again\n' +
+            '4. Restart Chrome if issue persists';
+        } else {
+          userMessage += '\n\nTips:\n' +
+            '- Make sure Playwright is attached to a tab\n' +
+            '- Try refreshing the target page\n' +
+            '- Check browser console for details';
+        }
+        
+        alert(userMessage);
+        setIsRecording(false);
+      } else if (!response?.success) {
+        console.error('Recording failed:', response?.error);
+        
+        let userMessage = '❌ Failed to start recording';
+        
+        if (response?.error) {
+          userMessage += ': ' + response.error;
+          
+          // Check for debugger conflict in error message
+          if (response.error.includes('already attached') || response.error.includes('Another debugger')) {
+            userMessage = '❌ Cannot attach debugger\n\n' +
+              'Another debugger is already connected to this tab.\n\n' +
+              'Please:\n' +
+              '✓ Close Chrome DevTools (press F12 to toggle)\n' +
+              '✓ Close any other debugging/inspection tools\n' +
+              '✓ Refresh the page\n' +
+              '✓ Try recording again';
+          }
+        }
+        
+        alert(userMessage);
+        setIsRecording(false);
+      } else {
+        console.log('✅ API Recording started successfully');
+      }
+    });
   };
 
   const handleStopRecording = () => {
-    setIsRecording(false);
-    chrome.runtime.sendMessage({ type: 'stopApiRecording' });
-    loadData();
+    chrome.runtime.sendMessage({ type: 'stopApiRecording' }, () => {
+      setIsRecording(false);
+      loadData();
+    });
   };
 
   const handleCreateTestFromRequest = (requestId: string) => {
@@ -80,6 +138,9 @@ export const ApiTestingUI: React.FC<ApiTestingUIProps> = ({ onClose }) => {
     if (testCase) {
       loadData();
       setActiveTab('tests');
+      alert('Test case created successfully!');
+    } else {
+      alert('Failed to create test case. Request not found.');
     }
   };
 
@@ -87,8 +148,9 @@ export const ApiTestingUI: React.FC<ApiTestingUIProps> = ({ onClose }) => {
     try {
       await apiTestingService.executeTestCase(testId);
       loadData();
-    } catch (error) {
-      alert(`Test execution failed: ${error}`);
+      alert('Test executed successfully!');
+    } catch (error: any) {
+      alert(`Test execution failed: ${error?.message || error}`);
     }
   };
 
@@ -116,11 +178,53 @@ export const ApiTestingUI: React.FC<ApiTestingUIProps> = ({ onClose }) => {
     }
   };
 
+  const addDemoData = () => {
+    // Add demo captured requests
+    const demoRequest: ApiRequest = {
+      id: `demo-req-${Date.now()}`,
+      method: 'GET',
+      url: 'https://jsonplaceholder.typicode.com/posts/1',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      timestamp: Date.now()
+    };
+
+    const demoResponse: ApiResponse = {
+      id: `demo-resp-${Date.now()}`,
+      requestId: demoRequest.id,
+      status: 200,
+      statusText: 'OK',
+      headers: {
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        userId: 1,
+        id: 1,
+        title: 'Demo Post',
+        body: 'This is a demo response'
+      }, null, 2),
+      responseTime: 125,
+      timestamp: Date.now()
+    };
+
+    apiTestingService.captureRequest(demoRequest);
+    apiTestingService.captureResponse(demoResponse);
+    loadData();
+    alert('Demo data added! Switch to Recorder tab to see it.');
+  };
+
   return (
     <div className="api-testing-panel">
       <div className="api-testing-header">
         <h2>🔌 API Testing Suite</h2>
-        <button className="close-button" onClick={onClose}>✕</button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button className="demo-button" onClick={addDemoData} title="Add sample data for testing">
+            + Demo Data
+          </button>
+          <button className="close-button" onClick={onClose}>✕</button>
+        </div>
       </div>
 
       <div className="api-testing-tabs">
@@ -231,11 +335,31 @@ const RecorderTab: React.FC<{
         <span className="recording-status">
           {isRecording ? '🔴 Recording...' : '⚫ Not Recording'}
         </span>
+        {isRecording && (
+          <span className="recording-hint" style={{ fontSize: '11px', opacity: 0.7, marginLeft: '10px' }}>
+            💡 Browse your app to capture API calls
+          </span>
+        )}
       </div>
 
       <div className="captured-requests">
         <h3>Captured Requests ({capturedRequests.length})</h3>
         <div className="request-list">
+          {capturedRequests.length === 0 && (
+            <div className="empty-state" style={{ padding: '30px 20px' }}>
+              {isRecording ? (
+                <>
+                  <p>🔍 Listening for API requests...</p>
+                  <p style={{ fontSize: '12px', opacity: 0.7 }}>Navigate your app to capture network traffic</p>
+                </>
+              ) : (
+                <>
+                  <p>📡 No requests captured yet</p>
+                  <p style={{ fontSize: '12px', opacity: 0.7 }}>Click "Start Recording" and browse your app</p>
+                </>
+              )}
+            </div>
+          )}
           {capturedRequests.map(({ request, response }) => (
             <div
               key={request.id}

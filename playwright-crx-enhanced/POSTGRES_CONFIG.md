@@ -180,9 +180,9 @@ DB_PASSWORD=strong_prod_password
 
 ### **2. Use Strong Passwords**
 
-❌ **Bad:** `DB_PASSWORD=password`  
-❌ **Bad:** `DB_PASSWORD=123456`  
-✅ **Good:** `DB_PASSWORD=Str0ng!P@ssw0rd#2024`  
+❌ **Bad:** `DB_PASSWORD=password`
+❌ **Bad:** `DB_PASSWORD=123456`
+✅ **Good:** `DB_PASSWORD=Str0ng!P@ssw0rd#2024`
 
 ### **3. Different Passwords Per Environment**
 
@@ -241,7 +241,7 @@ npm run prisma:studio
 
 ### **Error: "password authentication failed"**
 
-**Cause:** Wrong password in .env  
+**Cause:** Wrong password in .env
 **Solution:**
 ```env
 # Double-check your password
@@ -250,7 +250,7 @@ DB_PASSWORD=YourActualPassword
 
 ### **Error: "database does not exist"**
 
-**Cause:** Database not created  
+**Cause:** Database not created
 **Solution:**
 ```sql
 psql -U postgres
@@ -260,7 +260,7 @@ CREATE DATABASE playwright_crx;
 
 ### **Error: "connection refused"**
 
-**Cause:** PostgreSQL not running or wrong host/port  
+**Cause:** PostgreSQL not running or wrong host/port
 **Solution:**
 ```powershell
 # Check PostgreSQL status
@@ -276,7 +276,7 @@ DB_PORT=5432       # Check your actual port
 
 ### **Error: "role does not exist"**
 
-**Cause:** User doesn't exist  
+**Cause:** User doesn't exist
 **Solution:**
 ```sql
 psql -U postgres

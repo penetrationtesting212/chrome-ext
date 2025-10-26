@@ -1,31 +1,25 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import pool from './src/db';
 
 async function checkTestRuns() {
-  const runs = await prisma.testRun.findMany({
-    take: 5,
-    orderBy: { startedAt: 'desc' },
-    include: {
-      script: {
-        select: { name: true }
-      }
-    }
-  });
+  const { rows: runs } = await pool.query(
+    `SELECT tr.id, tr.status, tr."allureReportUrl", tr."startedAt", s.name AS script_name
+     FROM "TestRun" tr JOIN "Script" s ON s.id = tr."scriptId"
+     ORDER BY tr."startedAt" DESC
+     LIMIT 5`
+  );
 
   console.log('\n=== TEST RUNS IN DATABASE ===\n');
   console.log(`Total test runs found: ${runs.length}\n`);
 
-  runs.forEach((run, index) => {
+  runs.forEach((run: any, index: number) => {
     console.log(`${index + 1}. Test Run ID: ${run.id}`);
-    console.log(`   Script: ${run.script.name}`);
+    console.log(`   Script: ${run.script_name}`);
     console.log(`   Status: ${run.status}`);
     console.log(`   Allure Report URL: ${run.allureReportUrl || 'NOT SET'}`);
     console.log(`   Started: ${run.startedAt}`);
     console.log('');
   });
-
-  await prisma.$disconnect();
 }
 
 checkTestRuns().catch(console.error);
+

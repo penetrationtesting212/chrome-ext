@@ -79,7 +79,7 @@ You can generate [locators](/locators.md) with the test generator.
 * Press the `'Record'` button to stop the recording and the `'Pick Locator'` button will appear.
 * Click on the `'Pick Locator'` button and then hover over elements in the browser window to see the locator highlighted underneath each element.
 * To choose a locator click on the element you would like to locate and the code for that locator will appear in the locator playground next to the Pick Locator button.
-* You can then edit the locator in the locator playground to fine tune it and see the matching element highlighted in the browser window. 
+* You can then edit the locator in the locator playground to fine tune it and see the matching element highlighted in the browser window.
 * Use the copy button to copy the locator and paste it into your code.
 
 ######

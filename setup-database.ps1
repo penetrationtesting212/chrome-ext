@@ -5,6 +5,25 @@ Write-Host "🎭 Playwright-CRX Database Setup" -ForegroundColor Cyan
 Write-Host "=================================" -ForegroundColor Cyan
 Write-Host ""
 
+# Generate compact .env upfront
+Write-Host "Step 0: Generating compact .env" -ForegroundColor Yellow
+$envContent = @"
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=playwright_crx
+DB_USER=playwright_user
+DB_PASSWORD=playwright123
+DB_SCHEMA=public
+
+JWT_ACCESS_SECRET=dev-access-secret
+JWT_REFRESH_SECRET=dev-refresh-secret
+
+PORT=3000
+ALLOWED_ORIGINS=http://localhost:3000
+"@
+Set-Content -Path ".\playwright-crx-enhanced\backend\.env" -Value $envContent -Encoding UTF8
+Write-Host "✅ .env created at playwright-crx-enhanced\backend\.env" -ForegroundColor Green
+
 # Check if PostgreSQL is installed
 Write-Host "Checking PostgreSQL installation..." -ForegroundColor Yellow
 try {
@@ -52,24 +71,27 @@ if (Test-Path "node_modules") {
 }
 
 Write-Host ""
-Write-Host "Step 3: Generating Prisma Client" -ForegroundColor Yellow
-npm run prisma:generate
-Write-Host "✅ Prisma client generated" -ForegroundColor Green
+Write-Host "Step 3: Running SQL Migrations (psql)" -ForegroundColor Yellow
 
-Write-Host ""
-Write-Host "Step 4: Running Database Migrations" -ForegroundColor Yellow
-npm run prisma:migrate
-Write-Host "✅ Migrations completed" -ForegroundColor Green
-
-Write-Host ""
-Write-Host "Step 5: Seeding Database (Optional)" -ForegroundColor Yellow
-$seed = Read-Host "Seed database with test data? (y/N)"
-if ($seed -eq "y" -or $seed -eq "Y") {
-    npm run prisma:seed
-    Write-Host "✅ Database seeded" -ForegroundColor Green
+# Apply SQL migrations from prisma/migrations using psql
+$migrationDir = ".\prisma\migrations"
+if (Test-Path $migrationDir) {
+    $migrations = Get-ChildItem -Path $migrationDir -Directory | Sort-Object Name
+    foreach ($m in $migrations) {
+        $sqlPath = Join-Path $m.FullName "migration.sql"
+        if (Test-Path $sqlPath) {
+            Write-Host "Applying migration: $($m.Name)" -ForegroundColor Gray
+            & psql -h localhost -p 5432 -U playwright_user -d playwright_crx -f $sqlPath
+        }
+    }
+    Write-Host "✅ SQL migrations applied" -ForegroundColor Green
 } else {
-    Write-Host "⏭️ Skipping seed" -ForegroundColor Gray
+    Write-Host "⚠️ No migrations directory found at $migrationDir" -ForegroundColor Yellow
 }
+
+Write-Host ""
+Write-Host "Step 4: Optional seed (skipped)" -ForegroundColor Yellow
+Write-Host "⏭️ Skipping seed (Prisma removed)" -ForegroundColor Gray
 
 Write-Host ""
 Write-Host "🎉 Database Setup Complete!" -ForegroundColor Green
@@ -88,4 +110,4 @@ Write-Host "  Password: playwright123" -ForegroundColor White
 Write-Host ""
 
 # Return to root
-Set-Location -Path "../.."
+Set-Location -Path "..\.."

@@ -8,7 +8,7 @@ toc_max_heading_level: 2
 
 ### Miscellaneous
 
-- New Steps in Trace Viewer: 
+- New Steps in Trace Viewer:
   ![New Trace Viewer Steps](https://github.com/user-attachments/assets/1963ff7d-4070-41be-a79b-4333176921a2)
 - New method [`method: Locator.describe`] to describe a locator. Used for trace viewer.
   ```java
@@ -31,7 +31,7 @@ This version was also tested against the following stable channels:
 ## Version 1.52
 
 ### Highlights
- 
+
 - New method [`method: LocatorAssertions.toContainClass`] to ergonomically assert individual class names on the element.
 
   ```java

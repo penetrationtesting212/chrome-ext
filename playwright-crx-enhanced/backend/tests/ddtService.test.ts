@@ -1,32 +1,10 @@
 import { DDTService } from '../src/services/ddt/ddt.service';
-import { PrismaClient } from '@prisma/client';
 
-// Mock PrismaClient
-const mockPrisma = {
-  testDataFile: {
-    create: jest.fn(),
-    findMany: jest.fn(),
-    findFirst: jest.fn(),
-    delete: jest.fn(),
-    deleteMany: jest.fn()
-  },
-  testDataRow: {
-    createMany: jest.fn(),
-    findMany: jest.fn()
-  },
-  $transaction: jest.fn()
-};
-
-// Mock the prisma client
-jest.mock('@prisma/client', () => {
-  return {
-    PrismaClient: jest.fn().mockImplementation(() => mockPrisma)
-  };
-});
+// Deleted: Prisma mocks removed after migration
 
 describe('DDTService', () => {
   let ddtService: DDTService;
-  
+
   beforeEach(() => {
     // Clear all mocks before each test
     jest.clearAllMocks();
@@ -64,7 +42,7 @@ describe('DDTService', () => {
 
     it('should handle CSV parsing errors', async () => {
       const fileBuffer = Buffer.from('invalid,csv,content,with,errors');
-      
+
       // Mock Papa.parse to return errors
       jest.mock('papaparse', () => ({
         parse: jest.fn().mockReturnValue({
@@ -111,7 +89,7 @@ describe('DDTService', () => {
 
     it('should handle invalid JSON', async () => {
       const fileBuffer = Buffer.from('invalid json content');
-      
+
       await expect(ddtService.uploadJSON('test.json', fileBuffer, 'user-id', 'script-id'))
         .rejects
         .toThrow();
@@ -119,7 +97,7 @@ describe('DDTService', () => {
 
     it('should handle empty JSON array', async () => {
       const fileBuffer = Buffer.from('[]');
-      
+
       await expect(ddtService.uploadJSON('test.json', fileBuffer, 'user-id', 'script-id'))
         .rejects
         .toThrow('JSON array is empty');

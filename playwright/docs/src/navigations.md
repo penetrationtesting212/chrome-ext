@@ -98,7 +98,7 @@ and will click it.
 
 Playwright operates as a very fast user - the moment it sees the button, it
 clicks it. In the general case, you don't need to worry about whether all the
-resources loaded, etc. 
+resources loaded, etc.
 
 ## Hydration
 

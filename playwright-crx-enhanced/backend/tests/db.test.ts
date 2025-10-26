@@ -1,19 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import pool from '../src/db';
 
 describe('Database Connection', () => {
-  let prisma: PrismaClient;
-
-  beforeAll(() => {
-    prisma = new PrismaClient();
-  });
-
-  afterAll(async () => {
-    await prisma.$disconnect();
-  });
-
   it('should connect to the database', async () => {
-    // Try a simple query
-    const users = await prisma.user.findMany();
-    expect(users).toBeDefined();
+    const { rows } = await pool.query('SELECT 1 as ok');
+    expect(rows[0].ok).toBe(1);
   });
 });

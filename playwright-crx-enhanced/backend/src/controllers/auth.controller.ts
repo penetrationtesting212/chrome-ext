@@ -12,15 +12,15 @@ export class AuthController {
 
     try {
       const result = await authService.register(email, password, name);
-      
+
       return res.status(201).json(result);
     } catch (error: any) {
       logger.error('Registration error:', error);
-      
+
       if (error.message.includes('already exists')) {
         return res.status(409).json({ error: error.message });
       }
-      
+
       return res.status(400).json({ error: error.message });
     }
   });
@@ -33,15 +33,15 @@ export class AuthController {
 
     try {
       const result = await authService.login(email, password);
-      
+
       return res.json(result);
     } catch (error: any) {
       logger.error('Login error:', error);
-      
+
       if (error.message === 'Invalid credentials') {
         return res.status(401).json({ error: error.message });
       }
-      
+
       return res.status(400).json({ error: error.message });
     }
   });
@@ -54,7 +54,7 @@ export class AuthController {
 
     try {
       const result = await authService.refreshAccessToken(refreshToken);
-      
+
       return res.json(result);
     } catch (error: any) {
       logger.error('Token refresh error:', error);
@@ -70,7 +70,7 @@ export class AuthController {
 
     try {
       await authService.logout(refreshToken);
-      
+
       return res.json({ message: 'Logged out successfully' });
     } catch (error: any) {
       logger.error('Logout error:', error);

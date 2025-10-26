@@ -10,7 +10,7 @@ import LiteYouTube from '@site/src/components/LiteYouTube';
 
 ### Trace Viewer and HTML Reporter Updates
 
-- New Steps in Trace Viewer and HTML reporter: 
+- New Steps in Trace Viewer and HTML reporter:
   ![New Trace Viewer Steps](https://github.com/user-attachments/assets/1963ff7d-4070-41be-a79b-4333176921a2)
 - New option in `'html'` reporter to set the title of a specific test run:
   ```js
@@ -45,7 +45,7 @@ This version was also tested against the following stable channels:
 ## Version 1.52
 
 ### Highlights
- 
+
 - New method [`method: LocatorAssertions.toContainClass`] to ergonomically assert individual class names on the element.
 
   ```ts

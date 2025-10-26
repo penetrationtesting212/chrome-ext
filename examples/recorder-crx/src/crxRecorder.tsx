@@ -111,7 +111,13 @@ export const CrxRecorder: React.FC = ({
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
   const [loginError, setLoginError] = React.useState('');
   const [userEmail, setUserEmail] = React.useState('');
-
+  // Sign up state
+  const [showRegisterForm, setShowRegisterForm] = React.useState(false);
+  const [registerEmail, setRegisterEmail] = React.useState('');
+  const [registerPassword, setRegisterPassword] = React.useState('');
+  const [registerName, setRegisterName] = React.useState('');
+  const [isRegistering, setIsRegistering] = React.useState(false);
+  const [registerError, setRegisterError] = React.useState('');
   React.useEffect(() => {
     const checkAuthentication = async () => {
       try {
@@ -285,6 +291,26 @@ export const CrxRecorder: React.FC = ({
     }
   };
 
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsRegistering(true);
+    setRegisterError('');
+
+    try {
+      const result = await apiService.register(registerEmail, registerPassword, registerName);
+      setIsAuthenticated(true);
+      setUserEmail(result.user.email);
+      setShowRegisterForm(false);
+      setRegisterEmail('');
+      setRegisterPassword('');
+      setRegisterName('');
+    } catch (error: any) {
+      setRegisterError(error?.message || 'Sign up failed. Please check your details.');
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await apiService.logout();
@@ -359,62 +385,116 @@ export const CrxRecorder: React.FC = ({
     );
   }
 
-  // Show login form if not authenticated
+  // Show login or signup form if not authenticated
   if (!isAuthenticated) {
     return (
       <div className="auth-container">
         <div className="auth-box">
           <div className="auth-header">
             <h2>Playwright CRX</h2>
-            <p>Please login to continue</p>
+            <p>{showRegisterForm ? 'Create an account to continue' : 'Please login to continue'}</p>
           </div>
 
-          <form onSubmit={handleLogin} className="auth-form">
-            {loginError && (
-              <div className="auth-error">
-                {loginError}
+          {showRegisterForm ? (
+            <form onSubmit={handleRegister} className="auth-form">
+              {registerError && (
+                <div className="auth-error">
+                  {registerError}
+                </div>
+              )}
+
+              <div className="auth-field">
+                <label>Name</label>
+                <input
+                  type="text"
+                  value={registerName}
+                  onChange={e => setRegisterName(e.target.value)}
+                  placeholder="Your name"
+                  required
+                  disabled={isRegistering}
+                />
               </div>
-            )}
 
-            <div className="auth-field">
-              <label>Email</label>
-              <input
-                type="email"
-                value={loginEmail}
-                onChange={e => setLoginEmail(e.target.value)}
-                placeholder="demo@example.com"
-                required
-                disabled={isLoggingIn}
-              />
-            </div>
+              <div className="auth-field">
+                <label>Email</label>
+                <input
+                  type="email"
+                  value={registerEmail}
+                  onChange={e => setRegisterEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  disabled={isRegistering}
+                />
+              </div>
 
-            <div className="auth-field">
-              <label>Password</label>
-              <input
-                type="password"
-                value={loginPassword}
-                onChange={e => setLoginPassword(e.target.value)}
-                placeholder="Enter password"
-                required
-                disabled={isLoggingIn}
-              />
-            </div>
+              <div className="auth-field">
+                <label>Password</label>
+                <input
+                  type="password"
+                  value={registerPassword}
+                  onChange={e => setRegisterPassword(e.target.value)}
+                  placeholder="Enter password"
+                  required
+                  disabled={isRegistering}
+                />
+              </div>
 
-            <button type="submit" className="auth-button" disabled={isLoggingIn}>
-              {isLoggingIn ? 'Logging in...' : 'Login'}
-            </button>
+              <button type="submit" className="auth-button" disabled={isRegistering}>
+                {isRegistering ? 'Signing up...' : 'Sign Up'}
+              </button>
 
-            <div className="auth-hint">
-              <p>Demo credentials:</p>
-              <p className="auth-demo">demo@example.com / demo123</p>
-            </div>
-          </form>
+              <div className="auth-hint">
+                <a href="#" onClick={(e) => { e.preventDefault(); setShowRegisterForm(false); }}>Already have an account? Log in</a>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleLogin} className="auth-form">
+              {loginError && (
+                <div className="auth-error">
+                  {loginError}
+                </div>
+              )}
+
+              <div className="auth-field">
+                <label>Email</label>
+                <input
+                  type="email"
+                  value={loginEmail}
+                  onChange={e => setLoginEmail(e.target.value)}
+                  placeholder="demo@example.com"
+                  required
+                  disabled={isLoggingIn}
+                />
+              </div>
+
+              <div className="auth-field">
+                <label>Password</label>
+                <input
+                  type="password"
+                  value={loginPassword}
+                  onChange={e => setLoginPassword(e.target.value)}
+                  placeholder="Enter password"
+                  required
+                  disabled={isLoggingIn}
+                />
+              </div>
+
+              <button type="submit" className="auth-button" disabled={isLoggingIn}>
+                {isLoggingIn ? 'Logging in...' : 'Login'}
+              </button>
+
+              <div className="auth-hint">
+                <p>Demo credentials:</p>
+                <p className="auth-demo">demo@example.com / demo123</p>
+                <a href="#" onClick={(e) => { e.preventDefault(); setShowRegisterForm(true); }}>Create account</a>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     );
   }
-
-  return <>
+  return (<>
     <ModalContainer />
 
     {/* Save to Database Modal */}
@@ -565,5 +645,5 @@ export const CrxRecorder: React.FC = ({
         </div>
       )}
     </div>
-  </>;
+  </>);
 };

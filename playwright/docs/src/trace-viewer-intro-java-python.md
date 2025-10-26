@@ -62,7 +62,7 @@ context.tracing.stop(path = "trace.zip")
 
 ## Recording a trace
 * langs: java
-  
+
 Traces can be recorded using the [`property: BrowserContext.tracing`] API as follows:
 
 ```java

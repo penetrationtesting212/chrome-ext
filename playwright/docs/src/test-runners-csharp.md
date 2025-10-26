@@ -5,7 +5,7 @@ title: "Test Runners"
 
 ## Introduction
 
-While Playwright for .NET isn't tied to a particular test runner or testing framework, in our experience the easiest way of getting started is by using the base classes we provide for MSTest, NUnit, or xUnit. These classes support running tests on multiple browser engines, adjusting launch/context options and getting a [Page]/[BrowserContext] instance per test out of the box. 
+While Playwright for .NET isn't tied to a particular test runner or testing framework, in our experience the easiest way of getting started is by using the base classes we provide for MSTest, NUnit, or xUnit. These classes support running tests on multiple browser engines, adjusting launch/context options and getting a [Page]/[BrowserContext] instance per test out of the box.
 
 Playwright and Browser instances will be reused between tests for better performance. We
 recommend running each test case in a new BrowserContext, this way browser state will be
@@ -261,7 +261,7 @@ For example, to specify the number of workers you can use `NUnit.NumberOfTestWor
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <RunSettings>
-  <!-- NUnit adapter -->  
+  <!-- NUnit adapter -->
   <NUnit>
     <NumberOfTestWorkers>24</NumberOfTestWorkers>
   </NUnit>
@@ -272,7 +272,7 @@ For example, to specify the number of workers you can use `NUnit.NumberOfTestWor
       <DEBUG>pw:api</DEBUG>
     </EnvironmentVariables>
   </RunConfiguration>
-  <!-- Playwright -->  
+  <!-- Playwright -->
   <Playwright>
     <BrowserName>chromium</BrowserName>
     <ExpectTimeout>5000</ExpectTimeout>
@@ -291,7 +291,7 @@ For example, to specify the number of workers, you can use `MSTest.Parallelize.W
 
 ```xml
 <RunSettings>
-  <!-- MSTest adapter -->  
+  <!-- MSTest adapter -->
   <MSTest>
     <Parallelize>
       <Workers>4</Workers>
@@ -305,7 +305,7 @@ For example, to specify the number of workers, you can use `MSTest.Parallelize.W
       <DEBUG>pw:api</DEBUG>
     </EnvironmentVariables>
   </RunConfiguration>
-  <!-- Playwright -->  
+  <!-- Playwright -->
   <Playwright>
     <BrowserName>chromium</BrowserName>
     <ExpectTimeout>5000</ExpectTimeout>
@@ -336,7 +336,7 @@ For example, to specify the number of workers, you can use `xUnit.MaxParallelThr
       <DEBUG>pw:api</DEBUG>
     </EnvironmentVariables>
   </RunConfiguration>
-  <!-- Playwright -->  
+  <!-- Playwright -->
   <Playwright>
     <BrowserName>chromium</BrowserName>
     <ExpectTimeout>5000</ExpectTimeout>

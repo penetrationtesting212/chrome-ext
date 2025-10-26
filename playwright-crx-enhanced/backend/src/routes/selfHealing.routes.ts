@@ -1,31 +1,25 @@
 import { Router } from 'express';
-import {
-  recordFailure,
-  getSuggestions,
-  approveSuggestion,
-  rejectSuggestion,
-  getLocatorStrategies,
-  updateStrategyPriority
-} from '../controllers/selfHealing.controller';
+import { selfHealingController } from '../controllers/selfHealing.controller';
+import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
 
-// Record a locator failure
-router.post('/record-failure', recordFailure);
+// Get all suggestions for the authenticated user
+router.get('/suggestions', authMiddleware, (req, res) => selfHealingController.getSuggestions(req, res));
 
-// Get self-healing suggestions for a script
-router.get('/suggestions/:scriptId', getSuggestions);
+// Approve a suggestion
+router.post('/suggestions/:id/approve', authMiddleware, (req, res) => selfHealingController.approveSuggestion(req, res));
 
-// Approve a self-healing suggestion
-router.put('/approve/:suggestionId', approveSuggestion);
+// Reject a suggestion
+router.post('/suggestions/:id/reject', authMiddleware, (req, res) => selfHealingController.rejectSuggestion(req, res));
 
-// Reject a self-healing suggestion
-router.put('/reject/:suggestionId', rejectSuggestion);
+// Create demo suggestions for testing
+router.post('/suggestions/demo', authMiddleware, (req, res) => selfHealingController.createDemoSuggestions(req, res));
 
-// Get locator strategies for fallback
-router.get('/strategies', getLocatorStrategies);
+// Get locator strategies
+router.get('/strategies', authMiddleware, (req, res) => selfHealingController.getStrategies(req, res));
 
-// Update locator strategy priority
-router.put('/strategies', updateStrategyPriority);
+// Update locator strategies
+router.put('/strategies', authMiddleware, (req, res) => selfHealingController.updateStrategies(req, res));
 
 export default router;

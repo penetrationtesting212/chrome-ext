@@ -3,6 +3,20 @@ import axios from 'axios';
 
 const API_URL = 'http://localhost:3000/api';
 
+// Add axios interceptor to always include token from localStorage
+axios.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 interface Script {
   id: string;
   name: string;
@@ -26,16 +40,30 @@ interface TestRun {
   };
 }
 
+interface HealingSuggestion {
+  id: string;
+  brokenLocator: string;
+  validLocator: string;
+  confidence: number;
+  status: 'pending' | 'approved' | 'rejected';
+  scriptId?: string;
+  scriptName?: string;
+  createdAt: string;
+  reason?: string;
+}
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [scripts, setScripts] = useState<Script[]>([]);
   const [testRuns, setTestRuns] = useState<TestRun[]>([]);
-  const [activeTab, setActiveTab] = useState<'scripts' | 'runs' | 'stats' | 'allure'>('scripts');
+  const [activeTab, setActiveTab] = useState<'scripts' | 'runs' | 'stats' | 'allure' | 'healing'>('scripts');
   const [error, setError] = useState('');
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
   const [generatingReport, setGeneratingReport] = useState<string | null>(null);
+  const [healingSuggestions, setHealingSuggestions] = useState<HealingSuggestion[]>([]);
+  const [healingStats, setHealingStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0, avgConfidence: 0 });
 
   useEffect(() => {
     checkAuth();
@@ -45,11 +73,11 @@ function App() {
     const token = localStorage.getItem('accessToken');
     if (token) {
       try {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         await loadData();
         setIsAuthenticated(true);
       } catch (err) {
         localStorage.removeItem('accessToken');
+        delete axios.defaults.headers.common['Authorization'];
       }
     }
   };
@@ -58,13 +86,17 @@ function App() {
     e.preventDefault();
     setError('');
     try {
+      console.log('Attempting login...');
       const response = await axios.post(`${API_URL}/auth/login`, { email, password });
+      console.log('Login response:', response.data);
       const { accessToken } = response.data;
+      console.log('Access token received:', accessToken ? 'Yes' : 'No');
       localStorage.setItem('accessToken', accessToken);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+      console.log('Token stored in localStorage');
       setIsAuthenticated(true);
       await loadData();
     } catch (err: any) {
+      console.error('Login error:', err);
       setError(err.response?.data?.error || 'Login failed');
     }
   };
@@ -75,18 +107,33 @@ function App() {
     setIsAuthenticated(false);
     setScripts([]);
     setTestRuns([]);
+    setHealingSuggestions([]);
   };
 
   const loadData = async () => {
     try {
-      const [scriptsRes, runsRes] = await Promise.all([
+      const [scriptsRes, runsRes, healingRes] = await Promise.all([
         axios.get(`${API_URL}/scripts`),
-        axios.get(`${API_URL}/test-runs`)
+        axios.get(`${API_URL}/test-runs`),
+        axios.get(`${API_URL}/self-healing/suggestions`).catch(() => ({ data: { suggestions: [] } }))
       ]);
       setScripts(scriptsRes.data.scripts || []);
       setTestRuns(runsRes.data.data || []);
+      setHealingSuggestions(healingRes.data.suggestions || []);
+      
+      const suggestions = healingRes.data.suggestions || [];
+      const stats = {
+        total: suggestions.length,
+        pending: suggestions.filter((s: HealingSuggestion) => s.status === 'pending').length,
+        approved: suggestions.filter((s: HealingSuggestion) => s.status === 'approved').length,
+        rejected: suggestions.filter((s: HealingSuggestion) => s.status === 'rejected').length,
+        avgConfidence: suggestions.length > 0
+          ? suggestions.reduce((sum: number, s: HealingSuggestion) => sum + s.confidence, 0) / suggestions.length
+          : 0
+      };
+      setHealingStats(stats);
     } catch (err) {
-      // Error loading data
+      console.error('Error loading data:', err);
     }
   };
 
@@ -97,7 +144,7 @@ function App() {
       await loadData();
       setSelectedReport(response.data.reportUrl);
     } catch (err) {
-      // Error generating report
+      console.error('Error generating report:', err);
     } finally {
       setGeneratingReport(null);
     }
@@ -106,6 +153,50 @@ function App() {
   const viewAllureReport = (reportUrl: string) => {
     setSelectedReport(reportUrl);
     setActiveTab('allure');
+  };
+
+  const approveSuggestion = async (id: string) => {
+    try {
+      await axios.post(`${API_URL}/self-healing/suggestions/${id}/approve`);
+      await loadData();
+    } catch (err) {
+      console.error('Error approving suggestion:', err);
+    }
+  };
+
+  const rejectSuggestion = async (id: string) => {
+    try {
+      await axios.post(`${API_URL}/self-healing/suggestions/${id}/reject`);
+      await loadData();
+    } catch (err) {
+      console.error('Error rejecting suggestion:', err);
+    }
+  };
+
+  const createDemoSuggestions = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      console.log('Token from localStorage:', token);
+      console.log('Axios default auth header:', axios.defaults.headers.common['Authorization']);
+      
+      if (!token) {
+        console.error('No access token found. Please login again.');
+        alert('Please login first');
+        return;
+      }
+      
+      console.log('Sending demo request...');
+      const response = await axios.post(`${API_URL}/self-healing/suggestions/demo`);
+      console.log('Demo response:', response.data);
+      await loadData();
+    } catch (err: any) {
+      console.error('Error creating demo suggestions:', err);
+      console.error('Error response:', err.response?.data);
+      if (err.response?.status === 401) {
+        alert('Authentication failed. Please login again.');
+        handleLogout();
+      }
+    }
   };
 
   if (!isAuthenticated) {
@@ -227,6 +318,16 @@ function App() {
               >
                 📊 Allure Reports
               </button>
+              <button
+                onClick={() => setActiveTab('healing')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'healing'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                💊 Self-Healing ({healingStats.pending})
+              </button>
             </nav>
           </div>
         </div>
@@ -311,6 +412,111 @@ function App() {
                   </div>
                 </div>
               ))
+            )}
+          </div>
+        )}
+
+        {activeTab === 'healing' && (
+          <div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="text-sm font-medium text-gray-500">Total</div>
+                <div className="mt-2 text-3xl font-bold text-gray-900">{healingStats.total}</div>
+              </div>
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="text-sm font-medium text-gray-500">Pending</div>
+                <div className="mt-2 text-3xl font-bold text-yellow-600">{healingStats.pending}</div>
+              </div>
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="text-sm font-medium text-gray-500">Approved</div>
+                <div className="mt-2 text-3xl font-bold text-green-600">{healingStats.approved}</div>
+              </div>
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="text-sm font-medium text-gray-500">Avg Confidence</div>
+                <div className="mt-2 text-3xl font-bold text-blue-600">{Math.round(healingStats.avgConfidence * 100)}%</div>
+              </div>
+            </div>
+
+            <div className="mb-6 flex gap-4">
+              <button onClick={loadData} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                🔄 Refresh
+              </button>
+              <button onClick={createDemoSuggestions} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                ✨ Create Demo Suggestions
+              </button>
+            </div>
+
+            {healingSuggestions.length === 0 ? (
+              <div className="bg-white rounded-lg shadow p-12 text-center">
+                <div className="text-6xl mb-4">💊</div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Self-Healing Suggestions</h3>
+                <p className="text-gray-600 mb-6">Suggestions will appear when tests fail with broken locators.</p>
+                <button onClick={createDemoSuggestions} className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium">
+                  ✨ Create Demo Suggestions
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {healingSuggestions.filter(s => s.status === 'pending').length > 0 && (
+                  <div>
+                    <h2 className="text-xl font-semibold mb-4">Pending ({healingSuggestions.filter(s => s.status === 'pending').length})</h2>
+                    <div className="space-y-4">
+                      {healingSuggestions.filter(s => s.status === 'pending').map(s => (
+                        <div key={s.id} className="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
+                          <div className="grid md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                              <div className="text-sm font-medium text-red-600 mb-1">❌ Broken:</div>
+                              <code className="bg-red-50 px-3 py-2 rounded text-sm block break-all">{s.brokenLocator}</code>
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-green-600 mb-1">✅ Suggested:</div>
+                              <code className="bg-green-50 px-3 py-2 rounded text-sm block break-all">{s.validLocator}</code>
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <div className="flex gap-4 text-sm text-gray-600">
+                              <span className={`font-bold ${s.confidence > 0.8 ? 'text-green-600' : s.confidence > 0.6 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                {Math.round(s.confidence * 100)}%
+                              </span>
+                              {s.scriptName && <span>{s.scriptName}</span>}
+                              <span>{new Date(s.createdAt).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => approveSuggestion(s.id)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">✓ Approve</button>
+                              <button onClick={() => rejectSuggestion(s.id)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">✗ Reject</button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {healingSuggestions.filter(s => s.status === 'approved').length > 0 && (
+                  <div>
+                    <h2 className="text-xl font-semibold mb-4">Approved ({healingSuggestions.filter(s => s.status === 'approved').length})</h2>
+                    <div className="space-y-4">
+                      {healingSuggestions.filter(s => s.status === 'approved').map(s => (
+                        <div key={s.id} className="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <div>
+                              <div className="text-sm font-medium text-gray-600 mb-1">Broken:</div>
+                              <code className="bg-gray-50 px-3 py-2 rounded text-sm block break-all">{s.brokenLocator}</code>
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-green-600 mb-1">Fixed:</div>
+                              <code className="bg-green-50 px-3 py-2 rounded text-sm block break-all">{s.validLocator}</code>
+                            </div>
+                          </div>
+                          <div className="mt-2 flex gap-4 text-sm text-gray-600">
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">✓ Approved</span>
+                            <span>{Math.round(s.confidence * 100)}%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}

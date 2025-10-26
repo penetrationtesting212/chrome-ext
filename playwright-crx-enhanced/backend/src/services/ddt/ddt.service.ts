@@ -1,8 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import * as Papa from 'papaparse';
 import { logger } from '../../utils/logger';
-
-const prisma = new PrismaClient();
+import pool from '../../db';
 
 export interface ParsedRow {
   rowNumber: number;
@@ -21,8 +19,7 @@ export class DDTService {
   ) {
     try {
       const text = fileBuffer.toString('utf-8');
-      
-      // Parse CSV
+
       const parseResult = Papa.parse(text, {
         header: true,
         skipEmptyLines: true,
@@ -36,30 +33,32 @@ export class DDTService {
       const rows = parseResult.data as Array<Record<string, string>>;
       const columnNames = parseResult.meta.fields || [];
 
-      // Create test data file
-      const testDataFile = await prisma.testDataFile.create({
-        data: {
-          name: fileName.replace(/\.csv$/i, ''),
-          fileName,
-          fileType: 'csv',
-          fileSize: fileBuffer.length,
-          userId,
-          scriptId,
-          rowCount: rows.length,
-          columnNames: columnNames
+      const fileId = crypto.randomUUID?.() ?? require('crypto').randomUUID();
+      const { rows: fileRows } = await pool.query(
+        `INSERT INTO "TestDataFile" (id, name, "fileName", "fileType", "fileSize", "userId", "scriptId", "rowCount", "columnNames", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, 'csv', $4, $5, $6, $7, $8, now(), now())
+         RETURNING *`,
+        [fileId, fileName.replace(/\.csv$/i, ''), fileName, fileBuffer.length, userId, scriptId ?? null, rows.length, JSON.stringify(columnNames)]
+      );
+      const testDataFile = fileRows[0];
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        for (let i = 0; i < rows.length; i++) {
+          await client.query(
+            `INSERT INTO "TestDataRow" (id, "fileId", "rowNumber", data, "createdAt")
+             VALUES ($1, $2, $3, $4::jsonb, now())`,
+            [require('crypto').randomUUID(), testDataFile.id, i + 1, JSON.stringify(rows[i])]
+          );
         }
-      });
-
-      // Create rows
-      const rowsToCreate = rows.map((row, index) => ({
-        fileId: testDataFile.id,
-        rowNumber: index + 1,
-        data: row
-      }));
-
-      await prisma.testDataRow.createMany({
-        data: rowsToCreate
-      });
+        await client.query('COMMIT');
+      } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+      } finally {
+        client.release();
+      }
 
       logger.info(`CSV file uploaded: ${fileName} (${rows.length} rows)`);
 
@@ -87,42 +86,41 @@ export class DDTService {
       const text = fileBuffer.toString('utf-8');
       const data = JSON.parse(text);
 
-      // Validate JSON structure (should be an array)
       if (!Array.isArray(data)) {
         throw new Error('JSON must be an array of objects');
       }
-
       if (data.length === 0) {
         throw new Error('JSON array is empty');
       }
 
-      // Extract column names from first object
       const columnNames = Object.keys(data[0]);
 
-      // Create test data file
-      const testDataFile = await prisma.testDataFile.create({
-        data: {
-          name: fileName.replace(/\.json$/i, ''),
-          fileName,
-          fileType: 'json',
-          fileSize: fileBuffer.length,
-          userId,
-          scriptId,
-          rowCount: data.length,
-          columnNames: columnNames
+      const fileId = crypto.randomUUID?.() ?? require('crypto').randomUUID();
+      const { rows: fileRows } = await pool.query(
+        `INSERT INTO "TestDataFile" (id, name, "fileName", "fileType", "fileSize", "userId", "scriptId", "rowCount", "columnNames", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, 'json', $4, $5, $6, $7, $8, now(), now())
+         RETURNING *`,
+        [fileId, fileName.replace(/\.json$/i, ''), fileName, fileBuffer.length, userId, scriptId ?? null, data.length, JSON.stringify(columnNames)]
+      );
+      const testDataFile = fileRows[0];
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        for (let i = 0; i < data.length; i++) {
+          await client.query(
+            `INSERT INTO "TestDataRow" (id, "fileId", "rowNumber", data, "createdAt")
+             VALUES ($1, $2, $3, $4::jsonb, now())`,
+            [require('crypto').randomUUID(), testDataFile.id, i + 1, JSON.stringify(data[i])]
+          );
         }
-      });
-
-      // Create rows
-      const rowsToCreate = data.map((row, index) => ({
-        fileId: testDataFile.id,
-        rowNumber: index + 1,
-        data: row
-      }));
-
-      await prisma.testDataRow.createMany({
-        data: rowsToCreate
-      });
+        await client.query('COMMIT');
+      } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+      } finally {
+        client.release();
+      }
 
       logger.info(`JSON file uploaded: ${fileName} (${data.length} rows)`);
 
@@ -137,79 +135,59 @@ export class DDTService {
     }
   }
 
-  /**
-   * Get all data files for a user or script
-   */
   async getDataFiles(userId: string, scriptId?: string) {
     try {
-      const where: any = { userId };
-      
-      if (scriptId) {
-        where.scriptId = scriptId;
-      }
+      const params: any[] = [userId];
+      let where = 'WHERE "userId" = $1';
+      if (scriptId) { where += ' AND "scriptId" = $2'; params.push(scriptId); }
 
-      const files = await prisma.testDataFile.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          _count: {
-            select: { rows: true }
-          }
-        }
-      });
-
-      return files;
+      const { rows } = await pool.query(
+        `SELECT tdf.*, (SELECT COUNT(*) FROM "TestDataRow" r WHERE r."fileId" = tdf.id) AS rows_count
+         FROM "TestDataFile" tdf
+         ${where}
+         ORDER BY tdf."createdAt" DESC`, params
+      );
+      return rows.map(r => ({ ...r, _count: { rows: Number(r.rows_count) } }));
     } catch (error) {
       logger.error('Error getting data files:', error);
       throw error;
     }
   }
 
-  /**
-   * Get a specific data file with its rows
-   */
   async getDataFile(fileId: string, userId: string) {
     try {
-      const file = await prisma.testDataFile.findFirst({
-        where: { id: fileId, userId },
-        include: {
-          rows: {
-            orderBy: { rowNumber: 'asc' }
-          }
-        }
-      });
+      const { rows } = await pool.query(
+        `SELECT * FROM "TestDataFile" WHERE id = $1 AND "userId" = $2`,
+        [fileId, userId]
+      );
+      const file = rows[0];
+      if (!file) throw new Error('Data file not found');
 
-      if (!file) {
-        throw new Error('Data file not found');
-      }
+      const rowsRes = await pool.query(
+        `SELECT "rowNumber", data FROM "TestDataRow" WHERE "fileId" = $1 ORDER BY "rowNumber" ASC`,
+        [fileId]
+      );
 
-      return file;
+      return { ...file, rows: rowsRes.rows };
     } catch (error) {
       logger.error('Error getting data file:', error);
       throw error;
     }
   }
 
-  /**
-   * Get rows from a data file
-   */
   async getRows(fileId: string, userId: string, limit?: number, offset?: number) {
     try {
-      // Verify user owns the file
-      const file = await prisma.testDataFile.findFirst({
-        where: { id: fileId, userId }
-      });
+      const fileRes = await pool.query(
+        `SELECT id, name, "fileType", "rowCount", "columnNames" FROM "TestDataFile" WHERE id = $1 AND "userId" = $2`,
+        [fileId, userId]
+      );
+      const file = fileRes.rows[0];
+      if (!file) throw new Error('Data file not found');
 
-      if (!file) {
-        throw new Error('Data file not found');
-      }
-
-      const rows = await prisma.testDataRow.findMany({
-        where: { fileId },
-        orderBy: { rowNumber: 'asc' },
-        take: limit,
-        skip: offset
-      });
+      const rowsRes = await pool.query(
+        `SELECT "rowNumber", data FROM "TestDataRow" WHERE "fileId" = $1 ORDER BY "rowNumber" ASC ${limit ? 'LIMIT ' + Number(limit) : ''} ${offset ? 'OFFSET ' + Number(offset) : ''}`,
+        [fileId]
+      );
 
       return {
         file: {
@@ -219,10 +197,7 @@ export class DDTService {
           rowCount: file.rowCount,
           columnNames: file.columnNames
         },
-        rows: rows.map((r: any) => ({
-          rowNumber: r.rowNumber,
-          data: r.data
-        })),
+        rows: rowsRes.rows.map(r => ({ rowNumber: r.rowNumber, data: r.data })),
         total: file.rowCount
       };
     } catch (error) {
@@ -231,25 +206,15 @@ export class DDTService {
     }
   }
 
-  /**
-   * Delete a data file
-   */
   async deleteDataFile(fileId: string, userId: string) {
     try {
-      // Verify user owns the file
-      const file = await prisma.testDataFile.findFirst({
-        where: { id: fileId, userId }
-      });
+      const fileRes = await pool.query(
+        `SELECT id FROM "TestDataFile" WHERE id = $1 AND "userId" = $2`,
+        [fileId, userId]
+      );
+      if (!fileRes.rowCount) throw new Error('Data file not found');
 
-      if (!file) {
-        throw new Error('Data file not found');
-      }
-
-      // Delete file (cascade will delete rows)
-      await prisma.testDataFile.delete({
-        where: { id: fileId }
-      });
-
+      await pool.query(`DELETE FROM "TestDataFile" WHERE id = $1`, [fileId]);
       logger.info(`Data file deleted: ${fileId}`);
       return true;
     } catch (error) {
@@ -258,36 +223,21 @@ export class DDTService {
     }
   }
 
-  /**
-   * Bind variables to test data
-   * Used during test execution to replace ${variable} with actual data
-   */
   substituteVariables(template: string, data: Record<string, any>): string {
     let result = template;
-
-    // Replace ${variableName} with actual values
     Object.keys(data).forEach(key => {
       const regex = new RegExp(`\\$\\{${key}\\}`, 'g');
       result = result.replace(regex, String(data[key] || ''));
     });
-
     return result;
   }
 
-  /**
-   * Execute test with data-driven approach
-   * Returns all rows for iteration
-   */
   async prepareDataDrivenExecution(fileId: string, userId: string) {
     try {
-      const { rows, file } = await this.getRows(fileId, userId);
-
+      const { rows, file } = await this.getRows(fileId, userId) as any;
       return {
         fileInfo: file,
-        iterations: rows.map((r: any) => ({
-          iteration: r.rowNumber,
-          variables: r.data
-        }))
+        iterations: rows.map((r: any) => ({ iteration: r.rowNumber, variables: r.data }))
       };
     } catch (error) {
       logger.error('Error preparing DDT execution:', error);
@@ -297,3 +247,4 @@ export class DDTService {
 }
 
 export const ddtService = new DDTService();
+

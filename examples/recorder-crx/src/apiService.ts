@@ -16,11 +16,9 @@
 
 // Configuration
 const API_BASE_URL = 'http://localhost:3000/api';
-const WS_URL = 'ws://localhost:3000/ws';
 
 export interface ApiConfig {
   baseUrl: string;
-  wsUrl: string;
 }
 
 export interface AuthTokens {
@@ -79,13 +77,11 @@ export interface TestStep {
 export class ApiService {
   private config: ApiConfig;
   private tokens: AuthTokens | null = null;
-  private websocket: WebSocket | null = null;
   private messageHandlers: Map<string, (data: any) => void> = new Map();
 
   constructor(config?: Partial<ApiConfig>) {
     this.config = {
-      baseUrl: config?.baseUrl || API_BASE_URL,
-      wsUrl: config?.wsUrl || WS_URL
+      baseUrl: config?.baseUrl || API_BASE_URL
     };
   }
 
@@ -137,7 +133,9 @@ export class ApiService {
    * Make an API request
    */
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.config.baseUrl}${endpoint}`;
+    // Ensure endpoint starts with / if not already
+    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${this.config.baseUrl}${normalizedEndpoint}`;
 
     // Add authentication header if available
     const headers = new Headers(options.headers || {});
@@ -151,6 +149,8 @@ export class ApiService {
       headers
     };
 
+    console.log('API Request:', { method: options.method || 'GET', url, headers: Object.fromEntries(headers) });
+    
     const response = await fetch(url, config);
 
     if (!response.ok) {
@@ -159,7 +159,24 @@ export class ApiService {
         this.clearTokens();
         throw new Error('Unauthorized');
       }
-      const errorText = await response.text().catch(() => response.statusText);
+      
+      let errorText;
+      try {
+        errorText = await response.text();
+      } catch (textError) {
+        errorText = response.statusText;
+      }
+      
+      // Log detailed error for debugging
+      console.error('API Request Failed:', {
+        url,
+        method: options.method || 'GET',
+        status: response.status,
+        statusText: response.statusText,
+        errorText,
+        headers: Object.fromEntries(response.headers)
+      });
+      
       throw new Error(`API request failed: ${errorText}`);
     }
 
@@ -358,72 +375,69 @@ export class ApiService {
   /**
    * Connect to WebSocket
    */
-  connectWebSocket(): void {
-    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-      return;
-    }
-
-    this.websocket = new WebSocket(this.config.wsUrl);
-
-    this.websocket.onopen = () => {
-      console.log('WebSocket connected');
-      if (this.tokens && this.tokens.accessToken) {
-        this.sendMessage('auth', { token: this.tokens.accessToken });
-      }
-    };
-
-    this.websocket.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        const handler = this.messageHandlers.get(message.type);
-        if (handler) {
-          handler(message.data);
-        }
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
-    };
-
-    this.websocket.onclose = () => {
-      console.log('WebSocket disconnected');
-    };
-
-    this.websocket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-  }
+  // Deleted:connectWebSocket(): void {
+  // Deleted:  if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+  // Deleted:    return;
+  // Deleted:  }
+  // Deleted:
+  // Deleted:  this.websocket = new WebSocket(this.config.wsUrl);
+  // Deleted:
+  // Deleted:  this.websocket.onopen = () => {
+  // Deleted:    console.log('WebSocket connected');
+  // Deleted:    if (this.tokens && this.tokens.accessToken) {
+  // Deleted:      this.sendMessage('auth', { token: this.tokens.accessToken });
+  // Deleted:    }
+  // Deleted:  };
+  // Deleted:
+  // Deleted:  this.websocket.onmessage = (event) => {
+  // Deleted:    try {
+  // Deleted:      const message = JSON.parse(event.data);
+  // Deleted:      const handler = this.messageHandlers.get(message.type);
+  // Deleted:      if (handler) {
+  // Deleted:        handler(message.data);
+  // Deleted:      }
+  // Deleted:    } catch (error) {
+  // Deleted:      console.error('Error parsing WebSocket message:', error);
+  // Deleted:    }
+  // Deleted:  };
+  // Deleted:
+  // Deleted:  this.websocket.onclose = () => {
+  // Deleted:    console.log('WebSocket disconnected');
+  // Deleted:  };
+  // Deleted:
+  // Deleted:  this.websocket.onerror = (error) => {
+  // Deleted:    console.error('WebSocket error:', error);
+  // Deleted:  };
+  // Deleted:}
 
   /**
    * Send message through WebSocket
    */
-  sendMessage(type: string, data: any): void {
-    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-      this.websocket.send(JSON.stringify({ type, data }));
-    }
-  }
+  // Deleted:sendMessage(type: string, data: any): void {
+  // Deleted:  if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+  // Deleted:    this.websocket.send(JSON.stringify({ type, data }));
+  // Deleted:  }
+  // Deleted:}
 
   /**
-   * Add WebSocket message handler
+   * Add message handler (no-op without WebSocket)
    */
   addMessageHandler(type: string, handler: (data: any) => void): void {
     this.messageHandlers.set(type, handler);
   }
 
   /**
-   * Remove WebSocket message handler
+   * Remove message handler (no-op without WebSocket)
    */
   removeMessageHandler(type: string): void {
     this.messageHandlers.delete(type);
   }
 
   /**
-   * Disconnect WebSocket
+   * Disconnect WebSocket (no-op)
    */
-  disconnectWebSocket(): void {
-    if (this.websocket) {
-      this.websocket.close();
-      this.websocket = null;
-    }
+  disconnect(): void {
+    // no-op: WebSocket removed
   }
 }
 

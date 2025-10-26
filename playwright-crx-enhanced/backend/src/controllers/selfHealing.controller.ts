@@ -1,169 +1,118 @@
 import { Request, Response } from 'express';
 import { selfHealingService } from '../services/selfHealing/selfHealing.service';
-import { AppError } from '../middleware/errorHandler';
+import { logger } from '../utils/logger';
 
-/**
- * Record a locator failure
- */
-export const recordFailure = async (req: Request, res: Response) => {
-  try {
-    const { scriptId, brokenLocator, validLocator } = req.body;
+export class SelfHealingController {
+  async getSuggestions(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
 
-    if (!scriptId || !brokenLocator) {
-      throw new AppError('scriptId and brokenLocator are required', 400);
+      const { status } = req.query;
+      const suggestions = await selfHealingService.getAllSuggestions(
+        userId,
+        status as string | undefined
+      );
+
+      res.json({ suggestions });
+    } catch (error) {
+      logger.error('Error getting self-healing suggestions:', error);
+      res.status(500).json({ error: 'Failed to get suggestions' });
     }
-
-    const result = await selfHealingService.recordFailure(
-      scriptId,
-      brokenLocator,
-      validLocator
-    );
-
-    res.status(200).json({
-      success: true,
-      data: result
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to record locator failure'
-    });
   }
-};
 
-/**
- * Get self-healing suggestions for a script
- */
-export const getSuggestions = async (req: Request, res: Response) => {
-  try {
-    const { scriptId } = req.params;
-    const { status } = req.query;
+  async approveSuggestion(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
 
-    if (!scriptId) {
-      throw new AppError('scriptId is required', 400);
+      const { id } = req.params;
+      const suggestion = await selfHealingService.approveSuggestion(id, userId);
+
+      res.json({ success: true, suggestion });
+    } catch (error: any) {
+      logger.error('Error approving suggestion:', error);
+      res.status(error.message === 'Unauthorized' ? 403 : 500).json({ 
+        error: error.message || 'Failed to approve suggestion' 
+      });
     }
-
-    const suggestions = await selfHealingService.getSuggestions(
-      scriptId,
-      status as string
-    );
-
-    res.status(200).json({
-      success: true,
-      data: suggestions
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to get suggestions'
-    });
   }
-};
 
-/**
- * Approve a self-healing suggestion
- */
-export const approveSuggestion = async (req: Request, res: Response) => {
-  try {
-    const { suggestionId } = req.params;
-    const _userId = (req as any).user.id; // Assuming auth middleware sets user
+  async rejectSuggestion(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
 
-    if (!suggestionId) {
-      throw new AppError('suggestionId is required', 400);
+      const { id } = req.params;
+      const suggestion = await selfHealingService.rejectSuggestion(id, userId);
+
+      res.json({ success: true, suggestion });
+    } catch (error: any) {
+      logger.error('Error rejecting suggestion:', error);
+      res.status(error.message === 'Unauthorized' ? 403 : 500).json({ 
+        error: error.message || 'Failed to reject suggestion' 
+      });
     }
-
-    const result = await selfHealingService.approveSuggestion(
-      suggestionId,
-      _userId
-    );
-
-    res.status(200).json({
-      success: true,
-      data: result
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to approve suggestion'
-    });
   }
-};
 
-/**
- * Reject a self-healing suggestion
- */
-export const rejectSuggestion = async (req: Request, res: Response) => {
-  try {
-    const { suggestionId } = req.params;
-    const _userId = (req as any).user.id; // Assuming auth middleware sets user
+  async createDemoSuggestions(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
 
-    if (!suggestionId) {
-      throw new AppError('suggestionId is required', 400);
+      const suggestions = await selfHealingService.createDemoSuggestions(userId);
+
+      res.json({ success: true, suggestions });
+    } catch (error) {
+      logger.error('Error creating demo suggestions:', error);
+      res.status(500).json({ error: 'Failed to create demo suggestions' });
     }
-
-    const result = await selfHealingService.rejectSuggestion(
-      suggestionId,
-      _userId
-    );
-
-    res.status(200).json({
-      success: true,
-      data: result
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to reject suggestion'
-    });
   }
-};
 
-/**
- * Get locator strategies for fallback
- */
-export const getLocatorStrategies = async (req: Request, res: Response) => {
-  try {
-    const _userId = (req as any).user.id; // Assuming auth middleware sets user
+  async getStrategies(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
 
-    const strategies = await selfHealingService.getLocatorStrategies(_userId);
+      const strategies = await selfHealingService.getLocatorStrategies(userId);
 
-    res.status(200).json({
-      success: true,
-      data: strategies
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to get locator strategies'
-    });
-  }
-};
-
-/**
- * Update locator strategy priority
- */
-export const updateStrategyPriority = async (req: Request, res: Response) => {
-  try {
-    const strategies = req.body.strategies;
-    const _userId = (req as any).user.id; // Assuming auth middleware sets user
-
-    if (!strategies || !Array.isArray(strategies)) {
-      throw new AppError('strategies array is required', 400);
+      res.json({ strategies });
+    } catch (error) {
+      logger.error('Error getting locator strategies:', error);
+      res.status(500).json({ error: 'Failed to get strategies' });
     }
-
-    const result = await selfHealingService.updateStrategyPriority(
-      _userId,
-      strategies
-    );
-
-    res.status(200).json({
-      success: true,
-      data: result
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to update strategy priority'
-    });
   }
-};
+
+  async updateStrategies(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const { strategies } = req.body;
+      if (!Array.isArray(strategies)) {
+        return res.status(400).json({ error: 'Invalid strategies format' });
+      }
+
+      const updated = await selfHealingService.updateStrategyPriority(userId, strategies);
+
+      res.json({ success: true, strategies: updated });
+    } catch (error) {
+      logger.error('Error updating strategies:', error);
+      res.status(500).json({ error: 'Failed to update strategies' });
+    }
+  }
+}
+
+export const selfHealingController = new SelfHealingController();

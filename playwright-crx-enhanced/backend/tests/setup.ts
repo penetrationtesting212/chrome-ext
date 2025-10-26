@@ -1,33 +1,26 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import pool from '../src/db';
 
 async function setupTestDatabase() {
   console.log('Setting up test database...');
-  
+
   try {
-    // Clean up existing test data
-    await prisma.$transaction([
-      prisma.testDataRow.deleteMany(),
-      prisma.testDataFile.deleteMany(),
-      prisma.selfHealingLocator.deleteMany(),
-      prisma.locatorStrategy.deleteMany(),
-      prisma.variable.deleteMany(),
-      prisma.breakpoint.deleteMany(),
-      prisma.testStep.deleteMany(),
-      prisma.testRun.deleteMany(),
-      prisma.script.deleteMany(),
-      prisma.project.deleteMany(),
-      prisma.extensionScript.deleteMany(),
-      prisma.refreshToken.deleteMany(),
-      prisma.user.deleteMany()
-    ]);
-    
+    await pool.query('DELETE FROM "TestDataRow"');
+    await pool.query('DELETE FROM "TestDataFile"');
+    await pool.query('DELETE FROM "SelfHealingLocator"');
+    await pool.query('DELETE FROM "LocatorStrategy"');
+    await pool.query('DELETE FROM "Variable"');
+    await pool.query('DELETE FROM "Breakpoint"');
+    await pool.query('DELETE FROM "TestStep"');
+    await pool.query('DELETE FROM "TestRun"');
+    await pool.query('DELETE FROM "Script"');
+    await pool.query('DELETE FROM "Project"');
+    await pool.query('DELETE FROM "ExtensionScript"');
+    await pool.query('DELETE FROM "RefreshToken"');
+    await pool.query('DELETE FROM "User"');
+
     console.log('Test database cleaned up successfully');
   } catch (error) {
     console.error('Error setting up test database:', error);
-  } finally {
-    await prisma.$disconnect();
   }
 }
 

@@ -96,7 +96,7 @@ export const AISelfHealingUI: React.FC<AISelfHealingUIProps> = ({ onClose }) => 
       };
 
       setStatistics(combinedStats);
-      setHistory(realHistory);
+      setHistory(await loadHealingHistory());
       setConfig(currentConfig);
     } catch (error) {
       console.error('Failed to load AI self-healing data:', error);

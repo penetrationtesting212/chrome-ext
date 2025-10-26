@@ -971,7 +971,7 @@ To run Playwright tests on Google Cloud Build, use our public Docker image ([see
 ```yml
 steps:
 - name: mcr.microsoft.com/playwright:v%%VERSION%%-noble
-  script: 
+  script:
   ...
   env:
   - 'CI=true'

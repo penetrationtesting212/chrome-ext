@@ -51,6 +51,8 @@ chrome.extension.isAllowedIncognitoAccess().then(allowed => {
 
 // API Recording state
 let isApiRecording = false;
+let recordingTabId: number | null = null;
+const pendingRequests = new Map<string, any>();
 const networkListeners = new Map<number, (details: chrome.webRequest.WebRequestBodyDetails) => void>();
 
 async function changeAction(tabId: number, mode?: CrxMode | 'detached') {
@@ -204,9 +206,10 @@ chrome.runtime.onMessage.addListener((message, _, sendResponse) => {
 
   // Handle API recording messages
   if (message.type === 'startApiRecording') {
-    startApiRecording();
-    sendResponse({ success: true });
-    return true;
+    startApiRecording()
+      .then(() => sendResponse({ success: true }))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
+    return true; // Keep channel open for async response
   }
 
   if (message.type === 'stopApiRecording') {
@@ -227,100 +230,188 @@ chrome.runtime.onInstalled.addListener(details => {
 selfHealingService.loadStrategies().catch(() => {});
 
 /**
- * Start recording API requests
+ * Start recording API requests using debugger API for full capture
  */
-function startApiRecording() {
+async function startApiRecording() {
   if (isApiRecording) return;
+  
+  // Get Playwright-attached tab (not just active tab)
+  // If no attached tabs, fall back to active tab
+  let targetTabId: number | undefined;
+  
+  if (attachedTabIds.size > 0) {
+    // Use the first attached tab (Playwright recorder is connected here)
+    targetTabId = Array.from(attachedTabIds)[0];
+    console.log('Using Playwright-attached tab for API recording:', targetTabId);
+  } else {
+    // Fallback: use active tab if no Playwright connection
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    targetTabId = activeTab?.id;
+    console.log('Using active tab for API recording:', targetTabId);
+  }
+  
+  if (!targetTabId) {
+    console.error('No valid tab found for API recording');
+    throw new Error('No valid tab found for API recording');
+  }
+  
+  recordingTabId = targetTabId;
   isApiRecording = true;
 
-  // Setup webRequest listeners to capture network traffic
-  chrome.webRequest.onBeforeSendHeaders.addListener(
-    captureRequest,
-    { urls: ['<all_urls>'] },
-    ['requestHeaders', 'extraHeaders']
-  );
-
-  chrome.webRequest.onCompleted.addListener(
-    captureResponse,
-    { urls: ['<all_urls>'] },
-    ['responseHeaders']
-  );
+  try {
+    // Try to attach debugger
+    await chrome.debugger.attach({ tabId: recordingTabId }, '1.3');
+    await chrome.debugger.sendCommand({ tabId: recordingTabId }, 'Network.enable');
+    
+    console.log('✅ API Recording started on tab', recordingTabId);
+  } catch (error: any) {
+    isApiRecording = false;
+    recordingTabId = null;
+    
+    // Check if error is due to another debugger already attached
+    if (error.message?.includes('already attached') || error.message?.includes('Another debugger')) {
+      console.warn('⚠️ Another debugger is attached. Attempting to detach and retry...');
+      
+      try {
+        // Try to detach any existing debugger
+        await chrome.debugger.detach({ tabId: targetTabId }).catch(() => {});
+        
+        // Wait a bit for cleanup
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Retry attachment
+        recordingTabId = targetTabId;
+        isApiRecording = true;
+        await chrome.debugger.attach({ tabId: recordingTabId }, '1.3');
+        await chrome.debugger.sendCommand({ tabId: recordingTabId }, 'Network.enable');
+        
+        console.log('✅ API Recording started after detaching previous debugger');
+        return; // Success on retry
+      } catch (retryError: any) {
+        isApiRecording = false;
+        recordingTabId = null;
+        console.error('❌ Failed to start API recording after retry:', retryError);
+        throw new Error(
+          'Another debugger is already attached to this tab. ' +
+          'Please close Chrome DevTools (F12) on the target tab and try again.'
+        );
+      }
+    }
+    
+    console.error('❌ Failed to start API recording:', error);
+    throw error; // Propagate error to UI
+  }
 }
 
 /**
  * Stop recording API requests
  */
-function stopApiRecording() {
-  if (!isApiRecording) return;
+async function stopApiRecording() {
+  if (!isApiRecording || !recordingTabId) return;
+  
+  try {
+    await chrome.debugger.detach({ tabId: recordingTabId });
+    console.log('API Recording stopped');
+  } catch (error) {
+    console.error('Failed to stop API recording:', error);
+  }
+  
   isApiRecording = false;
-
-  chrome.webRequest.onBeforeSendHeaders.removeListener(captureRequest);
-  chrome.webRequest.onCompleted.removeListener(captureResponse);
+  recordingTabId = null;
+  pendingRequests.clear();
 }
 
-/**
- * Capture outgoing API request
- */
-function captureRequest(details: chrome.webRequest.WebRequestHeadersDetails) {
-  if (!isApiRecording) return;
+// Handle debugger events for network capture
+chrome.debugger.onEvent.addListener((source, method, params: any) => {
+  if (!isApiRecording || source.tabId !== recordingTabId) return;
 
-  // Filter out non-API requests (images, fonts, etc.)
-  const url = new URL(details.url);
-  if (shouldIgnoreRequest(url)) return;
+  // Capture request
+  if (method === 'Network.requestWillBeSent') {
+    const { requestId, request, timestamp } = params;
+    const url = new URL(request.url);
+    
+    if (shouldIgnoreRequest(url)) return;
+    
+    pendingRequests.set(requestId, {
+      requestId,
+      request,
+      timestamp,
+      startTime: Date.now()
+    });
 
-  const headers: Record<string, string> = {};
-  if (details.requestHeaders) {
-    details.requestHeaders.forEach((header: chrome.webRequest.HttpHeader) => {
-      if (header.name && header.value) {
-        headers[header.name] = header.value;
-      }
+    const apiRequest: ApiRequest = {
+      id: requestId,
+      method: request.method,
+      url: request.url,
+      headers: request.headers || {},
+      body: request.postData,
+      timestamp: Date.now()
+    };
+
+    apiTestingService.captureRequest(apiRequest);
+  }
+
+  // Capture response
+  if (method === 'Network.responseReceived') {
+    const { requestId, response, timestamp } = params;
+    const pending = pendingRequests.get(requestId);
+    
+    if (!pending) return;
+
+    const responseTime = pending.startTime ? Date.now() - pending.startTime : 0;
+
+    // Get response body
+    chrome.debugger.sendCommand(
+      { tabId: recordingTabId! },
+      'Network.getResponseBody',
+      { requestId }
+    ).then((result: any) => {
+      const { body, base64Encoded } = result;
+      const apiResponse: ApiResponse = {
+        id: `resp-${requestId}`,
+        requestId: requestId,
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers || {},
+        body: base64Encoded ? atob(body) : body,
+        responseTime,
+        timestamp: Date.now()
+      };
+
+      apiTestingService.captureResponse(apiResponse);
+      pendingRequests.delete(requestId);
+    }).catch(() => {
+      // Body not available, still capture response without body
+      const apiResponse: ApiResponse = {
+        id: `resp-${requestId}`,
+        requestId: requestId,
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers || {},
+        responseTime,
+        timestamp: Date.now()
+      };
+
+      apiTestingService.captureResponse(apiResponse);
+      pendingRequests.delete(requestId);
     });
   }
 
-  const request: ApiRequest = {
-    id: `req-${details.requestId}`,
-    method: details.method as any,
-    url: details.url,
-    headers,
-    timestamp: details.timeStamp
-  };
-
-  apiTestingService.captureRequest(request);
-}
-
-/**
- * Capture API response
- */
-function captureResponse(details: chrome.webRequest.WebResponseHeadersDetails) {
-  if (!isApiRecording) return;
-
-  const url = new URL(details.url);
-  if (shouldIgnoreRequest(url)) return;
-
-  const headers: Record<string, string> = {};
-  if (details.responseHeaders) {
-    details.responseHeaders.forEach((header: chrome.webRequest.HttpHeader) => {
-      if (header.name && header.value) {
-        headers[header.name.toLowerCase()] = header.value;
-      }
-    });
+  // Handle loading finished
+  if (method === 'Network.loadingFinished') {
+    const { requestId } = params;
+    pendingRequests.delete(requestId);
   }
+});
 
-  const response: ApiResponse = {
-    id: `resp-${details.requestId}`,
-    requestId: `req-${details.requestId}`,
-    status: details.statusCode,
-    statusText: getStatusText(details.statusCode),
-    headers,
-    responseTime: 0, // Will be calculated from timing if available
-    timestamp: details.timeStamp
-  };
-
-  // Note: Response body is not available in webRequest API
-  // We would need to use chrome.debugger or fetch API for body content
-
-  apiTestingService.captureResponse(response);
-}
+// Cleanup on debugger detach
+chrome.debugger.onDetach.addListener((source) => {
+  if (source.tabId === recordingTabId) {
+    isApiRecording = false;
+    recordingTabId = null;
+    pendingRequests.clear();
+  }
+});
 
 /**
  * Check if request should be ignored

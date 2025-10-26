@@ -28,7 +28,7 @@ timeouts and racy checks in their tests altogether.
 - [How to use assertions](/writing-tests.md#assertions)
 - [How tests run in isolation](/writing-tests.md#test-isolation)
 - [How to use test hooks](/writing-tests.md#using-test-hooks)
-  
+
 ## First test
 
 Take a look at the following example to see how to write a test.
@@ -76,7 +76,7 @@ public class ExampleTest : PageTest
 
         // Expects page to have a heading with the name of Installation.
         await Expect(Page.GetByRole(AriaRole.Heading, new() { Name = "Installation" })).ToBeVisibleAsync();
-    } 
+    }
 }
 ```
 
@@ -114,7 +114,7 @@ public class ExampleTest : PageTest
 
         // Expects page to have a heading with the name of Installation.
         await Expect(Page.GetByRole(AriaRole.Heading, new() { Name = "Installation" })).ToBeVisibleAsync();
-    } 
+    }
 }
 ```
 
@@ -149,7 +149,7 @@ public class UnitTest1: PageTest
 
         // Expects page to have a heading with the name of Installation.
         await Expect(Page.GetByRole(AriaRole.Heading, new() { Name = "Installation" })).ToBeVisibleAsync();
-    } 
+    }
 }
 ```
 </TabItem>
@@ -206,13 +206,13 @@ learn more about them.
 | [`method: Locator.selectOption`] | Select option in the drop down |
 
 ## Assertions
-  
+
 Playwright provides an async function called [Expect](./test-assertions) to assert and wait until the expected condition is met.
 
 ```csharp
 await Expect(Page).ToHaveTitleAsync(new Regex("Playwright"));
-``` 
-  
+```
+
 Here is the list of the most popular async assertions. Note that there are [many more](./test-assertions.md) to get familiar with:
 
 | Assertion | Description |

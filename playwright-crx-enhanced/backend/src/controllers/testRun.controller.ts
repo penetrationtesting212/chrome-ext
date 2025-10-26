@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { AppError } from '../middleware/errorHandler';
 import { allureService } from '../services/allure.service';
+import pool from '../db';
+import { randomUUID } from 'crypto';
 
-const prisma = new PrismaClient();
 
 /**
  * Get all test runs for a user
@@ -11,33 +11,24 @@ const prisma = new PrismaClient();
 export const getTestRuns = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.userId;
-    
-    const testRuns = await prisma.testRun.findMany({
-      where: { userId },
-      orderBy: { startedAt: 'desc' },
-      include: {
-        script: {
-          select: {
-            name: true
-          }
-        },
-        steps: {
-          orderBy: {
-            stepNumber: 'asc'
-          }
-        }
-      }
-    });
 
-    res.status(200).json({
-      success: true,
-      data: testRuns
-    });
+    const { rows } = await pool.query(
+      `SELECT tr.*, s.name AS script_name
+       FROM "TestRun" tr
+       JOIN "Script" s ON s.id = tr."scriptId"
+       WHERE tr."userId" = $1
+       ORDER BY tr."startedAt" DESC`,
+      [userId]
+    );
+
+    const testRuns = rows.map(r => ({
+      ...r,
+      script: { name: r.script_name }
+    }));
+
+    res.status(200).json({ success: true, data: testRuns });
   } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to get test runs'
-    });
+    res.status(500).json({ success: false, error: error.message || 'Failed to get test runs' });
   }
 };
 
@@ -49,45 +40,29 @@ export const getTestRun = async (req: Request, res: Response) => {
     const userId = (req as any).user.userId;
     const { id } = req.params;
 
-    const testRun = await prisma.testRun.findFirst({
-      where: {
-        id,
-        userId
-      },
-      include: {
-        script: {
-          select: {
-            name: true,
-            language: true
-          }
-        },
-        steps: {
-          orderBy: {
-            stepNumber: 'asc'
-          }
-        }
-      }
-    });
+    const { rows } = await pool.query(
+      `SELECT tr.*, s.name AS script_name, s.language AS script_language
+       FROM "TestRun" tr
+       JOIN "Script" s ON s.id = tr."scriptId"
+       WHERE tr.id = $1 AND tr."userId" = $2`,
+      [id, userId]
+    );
 
-    if (!testRun) {
-      throw new AppError('Test run not found', 404);
-    }
+    const testRun = rows[0];
+    if (!testRun) throw new AppError('Test run not found', 404);
 
     res.status(200).json({
       success: true,
-      data: testRun
+      data: {
+        ...testRun,
+        script: { name: testRun.script_name, language: testRun.script_language }
+      }
     });
   } catch (error: any) {
     if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        error: error.message
-      });
+      res.status(error.statusCode).json({ success: false, error: error.message });
     } else {
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to get test run'
-      });
+      res.status(500).json({ success: false, error: error.message || 'Failed to get test run' });
     }
   }
 };
@@ -100,49 +75,32 @@ export const startTestRun = async (req: Request, res: Response) => {
     const userId = (req as any).user.userId;
     const { scriptId, dataFileId: _dataFileId, environment, browser } = req.body;
 
-    // Validate required fields
-    if (!scriptId) {
-      throw new AppError('Script ID is required', 400);
-    }
+    if (!scriptId) throw new AppError('Script ID is required', 400);
 
-    // Check if script exists and belongs to user
-    const script = await prisma.script.findFirst({
-      where: {
-        id: scriptId,
-        userId
-      }
-    });
+    const scriptRes = await pool.query(
+      `SELECT id, name FROM "Script" WHERE id = $1 AND "userId" = $2`,
+      [scriptId, userId]
+    );
+    const script = scriptRes.rows[0];
+    if (!script) throw new AppError('Script not found', 404);
 
-    if (!script) {
-      throw new AppError('Script not found', 404);
-    }
+    const id = randomUUID();
+    const { rows } = await pool.query(
+      `INSERT INTO "TestRun" (id, "scriptId", "userId", status, environment, browser, "startedAt")
+       VALUES ($1, $2, $3, 'queued', COALESCE($4, 'development'), COALESCE($5, 'chromium'), now())
+       RETURNING *`,
+      [id, scriptId, userId, environment ?? null, browser ?? null]
+    );
+    const testRun = rows[0];
 
-    // Create test run record
-    const testRun = await prisma.testRun.create({
-      data: {
-        scriptId,
-        userId,
-        status: 'queued',
-        environment: environment || 'development',
-        browser: browser || 'chromium'
-      },
-      include: {
-        script: true
-      }
-    });
-
-    // Initialize Allure test recording
     try {
       await allureService.startTest(testRun.id, script.name);
     } catch (error) {
       console.error('Failed to start Allure test:', error);
     }
 
-    // Simulate test execution with mock steps for demonstration
-    // In a real implementation, the extension or test runner would provide actual steps
     setTimeout(async () => {
       try {
-        // Simulate some test steps
         const mockSteps = [
           { action: 'Navigate to page', status: 'passed' as const, duration: 500 },
           { action: 'Fill input field', status: 'passed' as const, duration: 300 },
@@ -154,38 +112,27 @@ export const startTestRun = async (req: Request, res: Response) => {
           await allureService.recordStep(testRun.id, step.action, step.status, step.duration);
         }
 
-        // End the test successfully
         await allureService.endTest(testRun.id, 'passed');
 
-        // Update test run status to completed
-        await prisma.testRun.update({
-          where: { id: testRun.id },
-          data: {
-            status: 'passed',
-            completedAt: new Date(),
-            duration: mockSteps.reduce((sum, s) => sum + (s.duration || 0), 0)
-          }
-        });
+        await pool.query(
+          `UPDATE "TestRun"
+           SET status = 'passed',
+               "completedAt" = now(),
+               duration = $2
+           WHERE id = $1`,
+          [testRun.id, mockSteps.reduce((sum, s) => sum + (s.duration || 0), 0)]
+        );
       } catch (error) {
         console.error('Failed to complete mock test execution:', error);
       }
-    }, 2000); // Simulate 2-second execution delay
+    }, 2000);
 
-    res.status(201).json({
-      success: true,
-      data: testRun
-    });
+    res.status(201).json({ success: true, data: testRun });
   } catch (error: any) {
     if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        error: error.message
-      });
+      res.status(error.statusCode).json({ success: false, error: error.message });
     } else {
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to start test run'
-      });
+      res.status(500).json({ success: false, error: error.message || 'Failed to start test run' });
     }
   }
 };
@@ -198,42 +145,26 @@ export const stopTestRun = async (req: Request, res: Response) => {
     const userId = (req as any).user.userId;
     const { id } = req.params;
 
-    // Check if test run exists and belongs to user
-    const testRun = await prisma.testRun.findFirst({
-      where: {
-        id,
-        userId
-      }
-    });
+    const exists = await pool.query(
+      `SELECT id FROM "TestRun" WHERE id = $1 AND "userId" = $2`,
+      [id, userId]
+    );
+    if (!exists.rowCount) throw new AppError('Test run not found', 404);
 
-    if (!testRun) {
-      throw new AppError('Test run not found', 404);
-    }
+    const { rows } = await pool.query(
+      `UPDATE "TestRun"
+       SET status = 'cancelled', "completedAt" = now()
+       WHERE id = $1
+       RETURNING *`,
+      [id]
+    );
 
-    // Update test run status
-    const updatedTestRun = await prisma.testRun.update({
-      where: { id },
-      data: {
-        status: 'cancelled',
-        completedAt: new Date()
-      }
-    });
-
-    res.status(200).json({
-      success: true,
-      data: updatedTestRun
-    });
+    res.status(200).json({ success: true, data: rows[0] });
   } catch (error: any) {
     if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        error: error.message
-      });
+      res.status(error.statusCode).json({ success: false, error: error.message });
     } else {
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to stop test run'
-      });
+      res.status(500).json({ success: false, error: error.message || 'Failed to stop test run' });
     }
   }
 };
@@ -244,37 +175,21 @@ export const stopTestRun = async (req: Request, res: Response) => {
 export const getActiveTestRuns = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.userId;
-    
-    // Since we don't have a proper active test runs tracking mechanism,
-    // we'll return an empty array for now
-    // In a real implementation, this would query active test runs
-    
-    const activeRuns = await prisma.testRun.findMany({
-      where: { 
-        userId,
-        status: {
-          in: ['running', 'queued']
-        }
-      },
-      orderBy: { startedAt: 'desc' },
-      include: {
-        script: {
-          select: {
-            name: true
-          }
-        }
-      }
-    });
 
-    res.status(200).json({
-      success: true,
-      data: activeRuns
-    });
+    const { rows } = await pool.query(
+      `SELECT tr.*, s.name AS script_name
+       FROM "TestRun" tr
+       JOIN "Script" s ON s.id = tr."scriptId"
+       WHERE tr."userId" = $1 AND tr.status IN ('running','queued')
+       ORDER BY tr."startedAt" DESC`,
+      [userId]
+    );
+
+    const activeRuns = rows.map(r => ({ ...r, script: { name: r.script_name } }));
+
+    res.status(200).json({ success: true, data: activeRuns });
   } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to get active test runs'
-    });
+    res.status(500).json({ success: false, error: error.message || 'Failed to get active test runs' });
   }
 };
 
@@ -287,22 +202,15 @@ export const updateTestRun = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status, errorMsg, duration, steps } = req.body;
 
-    // Check if test run exists and belongs to user
-    const testRun = await prisma.testRun.findFirst({
-      where: {
-        id,
-        userId
-      },
-      include: {
-        script: true
-      }
-    });
+    const existsRes = await pool.query(
+      `SELECT tr.id, s.name AS script_name
+       FROM "TestRun" tr JOIN "Script" s ON s.id = tr."scriptId"
+       WHERE tr.id = $1 AND tr."userId" = $2`,
+      [id, userId]
+    );
+    const existing = existsRes.rows[0];
+    if (!existing) throw new AppError('Test run not found', 404);
 
-    if (!testRun) {
-      throw new AppError('Test run not found', 404);
-    }
-
-    // Record steps to Allure if provided
     if (steps && Array.isArray(steps)) {
       for (const step of steps) {
         try {
@@ -318,7 +226,6 @@ export const updateTestRun = async (req: Request, res: Response) => {
       }
     }
 
-    // End Allure test with final status
     if (status && ['passed', 'failed', 'error'].includes(status)) {
       try {
         await allureService.endTest(
@@ -331,36 +238,23 @@ export const updateTestRun = async (req: Request, res: Response) => {
       }
     }
 
-    // Update test run in database
-    const updatedTestRun = await prisma.testRun.update({
-      where: { id },
-      data: {
-        status,
-        errorMsg: errorMsg || null,
-        duration: duration || null,
-        completedAt: ['passed', 'failed', 'error', 'cancelled'].includes(status) ? new Date() : undefined
-      },
-      include: {
-        script: true,
-        steps: true
-      }
-    });
+    const { rows } = await pool.query(
+      `UPDATE "TestRun"
+       SET status = COALESCE($2, status),
+           "errorMsg" = $3,
+           duration = $4,
+           "completedAt" = CASE WHEN $2 IN ('passed','failed','error','cancelled') THEN now() ELSE "completedAt" END
+       WHERE id = $1
+       RETURNING *`,
+      [id, status ?? null, errorMsg ?? null, duration ?? null]
+    );
 
-    res.status(200).json({
-      success: true,
-      data: updatedTestRun
-    });
+    res.status(200).json({ success: true, data: rows[0] });
   } catch (error: any) {
     if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        error: error.message
-      });
+      res.status(error.statusCode).json({ success: false, error: error.message });
     } else {
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to update test run'
-      });
+      res.status(500).json({ success: false, error: error.message || 'Failed to update test run' });
     }
   }
 };
@@ -383,47 +277,34 @@ export const reportTestResult = async (req: Request, res: Response) => {
       screenshotUrls
     } = req.body;
 
-    if (!testName || !status) {
-      throw new AppError('testName and status are required', 400);
-    }
+    if (!testName || !status) throw new AppError('testName and status are required', 400);
 
-    // Find or create a script entry to associate with the run
-    let script = await prisma.script.findFirst({
-      where: { userId, name: testName }
-    });
+    let scriptRes = await pool.query(
+      `SELECT id FROM "Script" WHERE "userId" = $1 AND name = $2`,
+      [userId, testName]
+    );
+    let script = scriptRes.rows[0];
 
     if (!script) {
-      script = await prisma.script.create({
-        data: {
-          name: testName,
-          description: 'Auto-created from Playwright reporter',
-          language: 'typescript',
-          code: '// Recorded by Playwright reporter',
-          userId
-        }
-      });
+      const scriptId = randomUUID();
+      const created = await pool.query(
+        `INSERT INTO "Script" (id, name, description, language, code, "userId", "browserType", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, 'typescript', $4, $5, 'chromium', now(), now())
+         RETURNING id`,
+        [scriptId, testName, 'Auto-created from Playwright reporter', '// Recorded by Playwright reporter', userId]
+      );
+      script = created.rows[0];
     }
 
-    const testRun = await prisma.testRun.create({
-      data: {
-        scriptId: script.id,
-        userId,
-        status,
-        duration: duration ?? null,
-        errorMsg: errorMsg ?? null,
-        environment: environment || 'development',
-        browser: browser || 'msedge',
-        traceUrl: traceUrl ?? null,
-        videoUrl: videoUrl ?? null,
-        screenshotUrls: screenshotUrls ?? null,
-        completedAt: new Date()
-      }
-    });
+    const runId = randomUUID();
+    const { rows } = await pool.query(
+      `INSERT INTO "TestRun" (id, "scriptId", "userId", status, duration, "errorMsg", browser, environment, "traceUrl", "videoUrl", "screenshotUrls", "completedAt", "startedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 'msedge'), COALESCE($8, 'development'), $9, $10, $11, now(), now())
+       RETURNING *`,
+      [runId, script.id, userId, status, duration ?? null, errorMsg ?? null, browser ?? null, environment ?? null, traceUrl ?? null, videoUrl ?? null, screenshotUrls ?? null]
+    );
 
-    res.status(201).json({
-      success: true,
-      data: testRun
-    });
+    res.status(201).json({ success: true, data: rows[0] });
   } catch (error: any) {
     if (error instanceof AppError) {
       res.status(error.statusCode).json({ success: false, error: error.message });
@@ -432,3 +313,4 @@ export const reportTestResult = async (req: Request, res: Response) => {
     }
   }
 };
+

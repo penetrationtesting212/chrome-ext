@@ -8,7 +8,7 @@ toc_max_heading_level: 2
 
 ### Miscellaneous
 
-- New Steps in Trace Viewer: 
+- New Steps in Trace Viewer:
   ![New Trace Viewer Steps](https://github.com/user-attachments/assets/1963ff7d-4070-41be-a79b-4333176921a2)
 - New method [`method: Locator.describe`] to describe a locator. Used for trace viewer.
   ```csharp
@@ -31,7 +31,7 @@ This version was also tested against the following stable channels:
 ## Version 1.52
 
 ### Highlights
- 
+
 - New method [`method: LocatorAssertions.toContainClass`] to ergonomically assert individual class names on the element.
 
   ```csharp
@@ -1549,7 +1549,7 @@ Its now possible to emulate the `forced-colors` CSS media feature by passing it 
 - [`method: Tracing.startChunk`] - Start a new trace chunk.
 - [`method: Tracing.stopChunk`] - Stops a new trace chunk.
 
-### Important ⚠
+### Important �
 * ⬆ .NET Core Apps 2.1 are **no longer** supported for our CLI tooling. As of August 31st, 2021, .NET Core 2.1 is no [longer supported](https://devblogs.microsoft.com/dotnet/net-core-2-1-will-reach-end-of-support-on-august-21-2021/) and will not receive any security updates. We've decided to move the CLI forward and require .NET Core 3.1 as a minimum.
 
 ### Browser Versions

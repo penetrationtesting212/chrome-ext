@@ -7,7 +7,7 @@ import LiteYouTube from '@site/src/components/LiteYouTube';
 
 ## Introduction
 
-Playwright Test was created specifically to accommodate the needs of end-to-end testing. Playwright supports all modern rendering engines including Chromium, WebKit, and Firefox. Test on Windows, Linux, and macOS, locally or on CI, headless or headed with native mobile emulation of Google Chrome for Android and Mobile Safari. 
+Playwright Test was created specifically to accommodate the needs of end-to-end testing. Playwright supports all modern rendering engines including Chromium, WebKit, and Firefox. Test on Windows, Linux, and macOS, locally or on CI, headless or headed with native mobile emulation of Google Chrome for Android and Mobile Safari.
 
 Get started by installing Playwright and generating a test to see it in action. Alternatively you can also get started and run your tests using the [CLI](./intro.md).
 
@@ -120,7 +120,7 @@ You can also edit the locators in VS Code and Playwright will show you the chang
 
 ### Run in debug mode
 
-To set a breakpoint click next to the line number where you want the breakpoint to be until a red dot appears. Run the tests in debug mode by right clicking on the line next to the test you want to run. 
+To set a breakpoint click next to the line number where you want the breakpoint to be until a red dot appears. Run the tests in debug mode by right clicking on the line next to the test you want to run.
 
 ![setting debug mode](https://github.com/microsoft/playwright/assets/13063165/31640629-efac-4cc7-b8b0-80ae18a3af83)
 
@@ -182,7 +182,7 @@ Playwright will look at your page and figure out the best locator, prioritizing 
 
 ## Project Dependencies
 
-You can use [project dependencies](./test-projects.md) to run tests that depend on other tests. This is useful for **setup** tests such as logging in to a website. 
+You can use [project dependencies](./test-projects.md) to run tests that depend on other tests. This is useful for **setup** tests such as logging in to a website.
 
 ### Running setup tests
 
@@ -190,7 +190,7 @@ To run your setup tests select the **setup** project, as defined in your configu
 
 ![setup tests in vscode](https://github.com/microsoft/playwright/assets/13063165/7a9eccd5-a5b3-431f-9eff-9b2971501e07)
 
-When you run a test that depends on the **setup** tests, the **setup** test will run first. Each time you run the test, the **setup** test will run again. 
+When you run a test that depends on the **setup** tests, the **setup** test will run first. Each time you run the test, the **setup** test will run again.
 
 ![running setup tests in vscode](https://github.com/microsoft/playwright/assets/13063165/a54b3868-3f9f-4e74-8d42-a93443f099fc)
 
@@ -214,7 +214,7 @@ If your project contains more than one playwright configuration file, you can sw
 
 ![Selecting a configuration file](https://github.com/microsoft/playwright/assets/13063165/ff9ff838-d27a-403d-b939-94e6c295e1d7)
 
-You will now have access to all your tests in the test explorer. To run a test click on the grey triangle next to the file or project name. 
+You will now have access to all your tests in the test explorer. To run a test click on the grey triangle next to the file or project name.
 
 ![Switching between configuration files](https://github.com/microsoft/playwright/assets/13063165/70930de5-0a0c-45e0-a6ee-b51f727f0e35)
 
@@ -222,7 +222,7 @@ To run all tests from all configurations click on the grey triangle at the top o
 
 ![Running all tests from all configurations](https://github.com/microsoft/playwright/assets/13063165/b3de4ce1-d311-4527-b2c7-b3e2f179a685)
 
-To choose a configuration file to work with simply toggle between them by clicking on the configuration file name in the Playwright sidebar. Now when you use the tools, such as Record a test, it will record a test for the selected configuration file. 
+To choose a configuration file to work with simply toggle between them by clicking on the configuration file name in the Playwright sidebar. Now when you use the tools, such as Record a test, it will record a test for the selected configuration file.
 
 ![Recording a test for a specific configuration file](https://github.com/microsoft/playwright/assets/13063165/a8ecbcd1-fab8-4012-bdaa-428951f233a2)
 

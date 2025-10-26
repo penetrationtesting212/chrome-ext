@@ -7,7 +7,7 @@ describe('JWT Test', () => {
       'secret',
       { expiresIn: '15m' }
     );
-    
+
     expect(token).toBeDefined();
   });
 });

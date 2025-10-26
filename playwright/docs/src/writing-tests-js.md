@@ -52,7 +52,7 @@ test('get started link', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Installation' })).toBeVisible();
 });
 ```
-  
+
 :::note
 Add `// @ts-check` at the start of each test file when using JavaScript in VS Code to get automatic type checking.
 :::
@@ -113,7 +113,7 @@ learn more about them.
 | [`method: Locator.selectOption`] | Select option in the drop down |
 
 ## Assertions
-  
+
 Playwright includes [test assertions](./test-assertions.md) in the form of `expect` function. To make an assertion, call `expect(value)` and choose a matcher that reflects the expectation.
 
 There are many generic matchers like `toEqual`, `toContain`, `toBeTruthy` that can be used to assert any conditions.
@@ -127,7 +127,7 @@ Playwright also includes async matchers that will wait until the expected condit
 ```js
 await expect(page).toHaveTitle(/Playwright/);
 ```
-  
+
 Here is the list of the most popular async assertions. Note that there are [many more](./test-assertions.md) to get familiar with:
 
 | Assertion | Description |
@@ -144,7 +144,7 @@ Here is the list of the most popular async assertions. Note that there are [many
 | [`method: PageAssertions.toHaveURL`] | Page has URL |
 
 ### Test Isolation
-  
+
 Playwright Test is based on the concept of [test fixtures](./test-fixtures.md) such as the [built in page fixture](./test-fixtures#built-in-fixtures), which is passed into your test. Pages are [isolated between tests due to the Browser Context](./browser-contexts), which is equivalent to a brand new browser profile, where every test gets a fresh environment, even when multiple tests run in a single Browser.
 
 ```js title="tests/example.spec.ts"

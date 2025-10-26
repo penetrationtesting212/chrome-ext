@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { logger } from '../../utils/logger';
-
-const prisma = new PrismaClient();
+import pool from '../../db';
 
 export interface LocatorInfo {
   locator: string;
@@ -11,55 +9,41 @@ export interface LocatorInfo {
 }
 
 export class SelfHealingService {
-  /**
-   * Record a locator failure and suggest alternative
-   */
   async recordFailure(
     scriptId: string,
     brokenLocator: LocatorInfo,
     validLocator?: LocatorInfo
   ) {
     try {
-      // Check if this combination already exists
       if (validLocator) {
-        const existing = await prisma.selfHealingLocator.findFirst({
-          where: {
-            scriptId,
-            brokenLocator: brokenLocator.locator,
-            validLocator: validLocator.locator
-          }
-        });
+        const { rows: existingRows } = await pool.query(
+          `SELECT id, "timesUsed" FROM "SelfHealingLocator"
+           WHERE "scriptId" = $1 AND "brokenLocator" = $2 AND "validLocator" = $3`,
+          [scriptId, brokenLocator.locator, validLocator.locator]
+        );
+        const existing = existingRows[0];
 
         if (existing) {
-          // Update usage count
-          await prisma.selfHealingLocator.update({
-            where: { id: existing.id },
-            data: {
-              timesUsed: existing.timesUsed + 1,
-              lastUsedAt: new Date()
-            }
-          });
+          await pool.query(
+            `UPDATE "SelfHealingLocator"
+             SET "timesUsed" = $2, "lastUsedAt" = now()
+             WHERE id = $1`,
+            [existing.id, (existing.timesUsed || 0) + 1]
+          );
           return existing;
         }
 
-        // Create new self-healing locator
-        const healingLocator = await prisma.selfHealingLocator.create({
-          data: {
-            scriptId,
-            brokenLocator: brokenLocator.locator,
-            brokenType: brokenLocator.type,
-            validLocator: validLocator.locator,
-            validType: validLocator.type,
-            elementTag: validLocator.elementTag,
-            elementText: validLocator.elementText,
-            status: 'pending'
-          }
-        });
-
+        const { rows } = await pool.query(
+          `INSERT INTO "SelfHealingLocator"
+           (id, "scriptId", "brokenLocator", "brokenType", "validLocator", "validType",
+            "elementTag", "elementText", status, "createdAt", "updatedAt")
+           VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, 'pending', now(), now())
+           RETURNING *`,
+          [scriptId, brokenLocator.locator, brokenLocator.type, validLocator.locator, validLocator.type, validLocator.elementTag ?? null, validLocator.elementText ?? null]
+        );
         logger.info(`Self-healing locator recorded for script ${scriptId}`);
-        return healingLocator;
+        return rows[0];
       }
-
       return null;
     } catch (error) {
       logger.error('Error recording locator failure:', error);
@@ -67,182 +51,254 @@ export class SelfHealingService {
     }
   }
 
-  /**
-   * Record successful locator usage
-   */
   async recordSuccess(scriptId: string, locator: string, _type: string) {
     try {
-      // Update confidence score for approved locators
-      await prisma.selfHealingLocator.updateMany({
-        where: {
-          scriptId,
-          validLocator: locator,
-          status: 'approved'
-        },
-        data: {
-          timesUsed: { increment: 1 },
-          lastUsedAt: new Date(),
-          confidence: { increment: 0.1 } // Increase confidence up to 1.0
-        }
-      });
+      await pool.query(
+        `UPDATE "SelfHealingLocator"
+         SET "timesUsed" = COALESCE("timesUsed",0) + 1,
+             "lastUsedAt" = now(),
+             confidence = LEAST(COALESCE(confidence,0) + 0.1, 1.0)
+         WHERE "scriptId" = $1 AND "validLocator" = $2 AND status = 'approved'`,
+        [scriptId, locator]
+      );
     } catch (error) {
       logger.error('Error recording success:', error);
     }
   }
 
-  /**
-   * Get self-healing suggestions for a script
-   */
   async getSuggestions(scriptId: string, status?: string) {
     try {
-      const where: any = { scriptId };
-      
-      if (status) {
-        where.status = status;
-      }
-
-      const suggestions = await prisma.selfHealingLocator.findMany({
-        where,
-        orderBy: [
-          { confidence: 'desc' },
-          { createdAt: 'desc' }
-        ]
-      });
-
-      return suggestions;
+      const { rows } = await pool.query(
+        `SELECT * FROM "SelfHealingLocator"
+         WHERE "scriptId" = $1 ${status ? 'AND status = $2' : ''}
+         ORDER BY confidence DESC, "createdAt" DESC`,
+        status ? [scriptId, status] : [scriptId]
+      );
+      return rows;
     } catch (error) {
       logger.error('Error getting suggestions:', error);
       throw error;
     }
   }
 
-  /**
-   * Approve a self-healing suggestion
-   */
+  async getAllSuggestions(userId: string, status?: string) {
+    try {
+      const query = `
+        SELECT shl.*, s.name as "scriptName", s.id as "scriptId"
+        FROM "SelfHealingLocator" shl
+        JOIN "Script" s ON s.id = shl."scriptId"
+        WHERE s."userId" = $1
+        ${status ? 'AND shl.status = $2' : ''}
+        ORDER BY shl."createdAt" DESC
+      `;
+      const { rows } = await pool.query(
+        query,
+        status ? [userId, status] : [userId]
+      );
+      return rows.map(row => ({
+        id: row.id,
+        brokenLocator: row.brokenLocator,
+        validLocator: row.validLocator,
+        confidence: row.confidence || 0.75,
+        status: row.status,
+        scriptId: row.scriptId,
+        scriptName: row.scriptName,
+        createdAt: row.createdAt,
+        reason: row.reason || this.getReasonForLocator(row.brokenLocator)
+      }));
+    } catch (error) {
+      logger.error('Error getting all suggestions:', error);
+      throw error;
+    }
+  }
+
+  async createDemoSuggestions(userId: string) {
+    try {
+      // Get user's first script or use a default
+      const { rows: scripts } = await pool.query(
+        `SELECT id FROM "Script" WHERE "userId" = $1 LIMIT 1`,
+        [userId]
+      );
+      
+      const scriptId = scripts[0]?.id || 'demo-script';
+
+      const demoSuggestions = [
+        {
+          brokenLocator: '#submit-button-12345',
+          brokenType: 'id',
+          validLocator: '[data-testid="submit-btn"]',
+          validType: 'testid',
+          confidence: 0.95,
+          reason: 'Dynamic ID with numbers detected'
+        },
+        {
+          brokenLocator: '.css-1x2y3z4-button',
+          brokenType: 'css',
+          validLocator: 'button[aria-label="Submit"]',
+          validType: 'css',
+          confidence: 0.85,
+          reason: 'CSS-in-JS module class (unstable)'
+        },
+        {
+          brokenLocator: '//*[@id="form"]/div[2]/button[1]',
+          brokenType: 'xpath',
+          validLocator: 'button[type="submit"]',
+          validType: 'css',
+          confidence: 0.80,
+          reason: 'XPath with array indices (fragile)'
+        },
+        {
+          brokenLocator: '#timestamp-1638457890',
+          brokenType: 'id',
+          validLocator: 'button[name="submit"]',
+          validType: 'css',
+          confidence: 0.75,
+          reason: 'Timestamp-based ID detected'
+        },
+        {
+          brokenLocator: '#uuid-abc-def-123',
+          brokenType: 'id',
+          validLocator: 'button.submit-btn',
+          validType: 'css',
+          confidence: 0.70,
+          reason: 'UUID pattern detected'
+        }
+      ];
+
+      const created = [];
+      for (const demo of demoSuggestions) {
+        const { rows } = await pool.query(
+          `INSERT INTO "SelfHealingLocator"
+           (id, "scriptId", "brokenLocator", "brokenType", "validLocator", "validType",
+            confidence, status, reason, "createdAt", "updatedAt")
+           VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, 'pending', $7, now(), now())
+           RETURNING *`,
+          [scriptId, demo.brokenLocator, demo.brokenType, demo.validLocator, demo.validType, demo.confidence, demo.reason]
+        );
+        created.push(rows[0]);
+      }
+
+      logger.info(`Created ${created.length} demo suggestions for user ${userId}`);
+      return await this.getAllSuggestions(userId);
+    } catch (error) {
+      logger.error('Error creating demo suggestions:', error);
+      throw error;
+    }
+  }
+
+  private getReasonForLocator(locator: string): string {
+    if (/\d{6,}/.test(locator)) return 'Contains long numeric ID (likely dynamic)';
+    if (/^\.(css|sc|jss)-\w+/.test(locator)) return 'CSS-in-JS class (changes on build)';
+    if (/timestamp|uid|uuid|random/i.test(locator)) return 'Contains dynamic identifier';
+    if (/\[\d+\]/.test(locator)) return 'Uses array index (fragile)';
+    return 'Locator stability issue detected';
+  }
+
   async approveSuggestion(id: string, userId: string) {
     try {
-      const suggestion = await prisma.selfHealingLocator.findUnique({
-        where: { id },
-        include: { script: true }
-      });
+      const { rows } = await pool.query(
+        `SELECT shl.id, s."userId" AS script_user
+         FROM "SelfHealingLocator" shl
+         JOIN "Script" s ON s.id = shl."scriptId"
+         WHERE shl.id = $1`,
+        [id]
+      );
+      const suggestion = rows[0];
+      if (!suggestion) throw new Error('Suggestion not found');
+      if (suggestion.script_user !== userId) throw new Error('Unauthorized');
 
-      if (!suggestion) {
-        throw new Error('Suggestion not found');
-      }
-
-      // Verify user owns the script
-      if (suggestion.script.userId !== userId) {
-        throw new Error('Unauthorized');
-      }
-
-      const updated = await prisma.selfHealingLocator.update({
-        where: { id },
-        data: {
-          status: 'approved',
-          approvedAt: new Date()
-        }
-      });
-
+      const { rows: updatedRows } = await pool.query(
+        `UPDATE "SelfHealingLocator" SET status = 'approved', "approvedAt" = now() WHERE id = $1 RETURNING *`,
+        [id]
+      );
       logger.info(`Self-healing suggestion ${id} approved`);
-      return updated;
+      return updatedRows[0];
     } catch (error) {
       logger.error('Error approving suggestion:', error);
       throw error;
     }
   }
 
-  /**
-   * Reject a self-healing suggestion
-   */
   async rejectSuggestion(id: string, userId: string) {
     try {
-      const suggestion = await prisma.selfHealingLocator.findUnique({
-        where: { id },
-        include: { script: true }
-      });
+      const { rows } = await pool.query(
+        `SELECT s."userId" AS script_user
+         FROM "SelfHealingLocator" shl JOIN "Script" s ON s.id = shl."scriptId"
+         WHERE shl.id = $1`,
+        [id]
+      );
+      const suggestion = rows[0];
+      if (!suggestion) throw new Error('Suggestion not found');
+      if (suggestion.script_user !== userId) throw new Error('Unauthorized');
 
-      if (!suggestion) {
-        throw new Error('Suggestion not found');
-      }
-
-      // Verify user owns the script
-      if (suggestion.script.userId !== userId) {
-        throw new Error('Unauthorized');
-      }
-
-      const updated = await prisma.selfHealingLocator.update({
-        where: { id },
-        data: {
-          status: 'rejected'
-        }
-      });
-
+      const { rows: updatedRows } = await pool.query(
+        `UPDATE "SelfHealingLocator" SET status = 'rejected' WHERE id = $1 RETURNING *`,
+        [id]
+      );
       logger.info(`Self-healing suggestion ${id} rejected`);
-      return updated;
+      return updatedRows[0];
     } catch (error) {
       logger.error('Error rejecting suggestion:', error);
       throw error;
     }
   }
 
-  /**
-   * Get locator strategies for fallback
-   */
   async getLocatorStrategies(userId: string) {
     try {
-      let strategies = await prisma.locatorStrategy.findMany({
-        where: { userId, enabled: true },
-        orderBy: { priority: 'asc' }
-      });
+      const { rows } = await pool.query(
+        `SELECT * FROM "LocatorStrategy" WHERE "userId" = $1 AND enabled = true ORDER BY priority ASC`,
+        [userId]
+      );
 
-      // If user doesn't have custom strategies, use defaults
-      if (strategies.length === 0) {
-        strategies = await this.createDefaultStrategies(userId);
+      if (rows.length === 0) {
+        return await this.createDefaultStrategies(userId);
       }
-
-      return strategies;
+      return rows;
     } catch (error) {
       logger.error('Error getting locator strategies:', error);
       throw error;
     }
   }
 
-  /**
-   * Update locator strategy priority
-   */
   async updateStrategyPriority(
     userId: string,
     strategies: Array<{ strategy: string; priority: number; enabled: boolean }>
   ) {
     try {
-      // Delete existing strategies
-      await prisma.locatorStrategy.deleteMany({
-        where: { userId }
-      });
+      await pool.query(`DELETE FROM "LocatorStrategy" WHERE "userId" = $1`, [userId]);
 
-      // Create new strategies with updated priorities
-      await prisma.locatorStrategy.createMany({
-        data: strategies.map(s => ({
-          userId,
-          strategy: s.strategy,
-          priority: s.priority,
-          enabled: s.enabled
-        }))
-      });
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        for (const s of strategies) {
+          await client.query(
+            `INSERT INTO "LocatorStrategy" (id, "userId", strategy, priority, enabled, "createdAt", "updatedAt")
+             VALUES (gen_random_uuid()::text, $1, $2, $3, $4, now(), now())`,
+            [userId, s.strategy, s.priority, s.enabled]
+          );
+        }
+        await client.query('COMMIT');
+      } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+      } finally {
+        client.release();
+      }
 
       logger.info(`Locator strategies updated for user ${userId}`);
-      return await this.getLocatorStrategies(userId);
+      const { rows } = await pool.query(
+        `SELECT * FROM "LocatorStrategy" WHERE "userId" = $1 ORDER BY priority ASC`,
+        [userId]
+      );
+      return rows;
     } catch (error) {
       logger.error('Error updating strategy priority:', error);
       throw error;
     }
   }
 
-  /**
-   * Create default locator strategies
-   */
   private async createDefaultStrategies(userId: string) {
-    const defaultStrategies = [
+    const defaults = [
       { strategy: 'id', priority: 1, enabled: true },
       { strategy: 'testid', priority: 2, enabled: true },
       { strategy: 'css', priority: 3, enabled: true },
@@ -250,22 +306,31 @@ export class SelfHealingService {
       { strategy: 'name', priority: 5, enabled: true }
     ];
 
-    await prisma.locatorStrategy.createMany({
-      data: defaultStrategies.map(s => ({
-        userId,
-        ...s
-      }))
-    });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const s of defaults) {
+        await client.query(
+          `INSERT INTO "LocatorStrategy" (id, "userId", strategy, priority, enabled, "createdAt", "updatedAt")
+           VALUES (gen_random_uuid()::text, $1, $2, $3, $4, now(), now())`,
+          [userId, s.strategy, s.priority, s.enabled]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
 
-    return await prisma.locatorStrategy.findMany({
-      where: { userId },
-      orderBy: { priority: 'asc' }
-    });
+    const { rows } = await pool.query(
+      `SELECT * FROM "LocatorStrategy" WHERE "userId" = $1 ORDER BY priority ASC`,
+      [userId]
+    );
+    return rows;
   }
 
-  /**
-   * Try to find element using alternative locators
-   */
   findAlternativeLocator(
     element: { tag: string; id?: string; className?: string; attributes: Record<string, string> },
     strategies: string[]
@@ -273,38 +338,25 @@ export class SelfHealingService {
     for (const strategy of strategies) {
       switch (strategy) {
         case 'id':
-          if (element.id) {
-            return { locator: `#${element.id}`, type: 'id' };
-          }
+          if (element.id) return { locator: `#${element.id}`, type: 'id' };
           break;
-        
         case 'testid':
           const testId = element.attributes['data-testid'] || element.attributes['data-test'];
-          if (testId) {
-            return { locator: `[data-testid="${testId}"]`, type: 'testid' };
-          }
+          if (testId) return { locator: `[data-testid="${testId}"]`, type: 'testid' };
           break;
-        
         case 'css':
-          if (element.className) {
-            return { locator: `.${element.className.split(' ')[0]}`, type: 'css' };
-          }
+          if (element.className) return { locator: `.${element.className.split(' ')[0]}`, type: 'css' };
           break;
-        
         case 'name':
-          if (element.attributes.name) {
-            return { locator: `[name="${element.attributes.name}"]`, type: 'name' };
-          }
+          if (element.attributes.name) return { locator: `[name="${element.attributes.name}"]`, type: 'name' };
           break;
-        
         case 'xpath':
-          // Generate basic XPath
           return { locator: `//${element.tag}`, type: 'xpath' };
       }
     }
-
     return null;
   }
 }
 
 export const selfHealingService = new SelfHealingService();
+
